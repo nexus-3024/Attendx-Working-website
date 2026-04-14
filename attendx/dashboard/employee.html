@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard — AttendX</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      🏢 Attend<span class="accent">X</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <button class="nav-item active" data-section="home">
+        <span class="nav-icon">🏠</span> Dashboard
+      </button>
+      <button class="nav-item" data-section="attendance">
+        <span class="nav-icon">📋</span> Attendance History
+      </button>
+      <button class="nav-item" data-section="leave">
+        <span class="nav-icon">🏖️</span> Leave Requests
+      </button>
+      <button class="nav-item" data-section="analytics">
+        <span class="nav-icon">📊</span> My Analytics
+      </button>
+
+      <div class="nav-section">Account</div>
+      <button class="nav-item" id="logoutBtn">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="avatarEl">?</div>
+      <div>
+        <div class="user-info-name" id="userNameEl">Loading…</div>
+        <div class="user-info-role">Employee</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ── SECTION: Home / Clock In ───────────────────────── -->
+    <section id="section-home" class="section active">
+
+      <div class="topbar">
+        <div>
+          <h1 class="page-title" id="greetingEl">Good morning 👋</h1>
+          <p class="page-subtitle">Here's your attendance summary for today</p>
+        </div>
+      </div>
+
+      <!-- Clock Widget -->
+      <div class="clock-widget">
+        <div class="clock-display">
+          <div class="live-time" id="liveTime">--:--:--</div>
+          <div class="live-date" id="liveDate"></div>
+          <div class="clock-status-dot not-started" id="clockStatus">Not clocked in</div>
+        </div>
+
+        <div class="clock-actions">
+          <div class="clock-times">
+            <div class="clock-time-item">
+              <div class="clock-time-label">Clock In</div>
+              <div class="clock-time-value" id="clockInTime">--:--</div>
+            </div>
+            <div class="clock-time-item">
+              <div class="clock-time-label">Clock Out</div>
+              <div class="clock-time-value" id="clockOutTime">--:--</div>
+            </div>
+          </div>
+
+          <button id="clockInBtn" class="btn btn-success btn-full btn-lg">
+            ⏱ Clock In
+          </button>
+          <button id="clockOutBtn" class="btn btn-danger btn-full btn-lg hidden">
+            🔴 Clock Out
+          </button>
+        </div>
+      </div>
+
+      <!-- Monthly Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div>
+            <div class="stat-value" id="statPresent">—</div>
+            <div class="stat-label">Days Present</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon yellow">⏰</div>
+          <div>
+            <div class="stat-value" id="statLate">—</div>
+            <div class="stat-label">Late Arrivals</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">⌚</div>
+          <div>
+            <div class="stat-value" id="statHours">—</div>
+            <div class="stat-label">Hours This Month</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">🏖️</div>
+          <div>
+            <div class="stat-value" id="statLeave">—</div>
+            <div class="stat-label">Pending Leaves</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Records -->
+      <div class="card">
+        <div class="card-title">Recent Attendance</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
+                <th>Hours</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="recentBody">
+              <tr><td colspan="5" class="text-center text-muted" style="padding:24px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── SECTION: Attendance History ────────────────────── -->
+    <section id="section-attendance" class="section">
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">Attendance History</h1>
+          <p class="page-subtitle">Your complete clock-in / clock-out records</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <select id="histMonth">
+            <option value="">All Months</option>
+            <option value="1">January</option>
+            <option value="2">February</option>
+            <option value="3">March</option>
+            <option value="4">April</option>
+            <option value="5">May</option>
+            <option value="6">June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+            <option value="9">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+          <select id="histYear"></select>
+          <button class="btn btn-outline btn-sm" id="histFilterBtn">Filter</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
+                <th>Hours</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="6" class="text-center text-muted" style="padding:24px">Select a month and click Filter</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECTION: Leave Requests ────────────────────────── -->
+    <section id="section-leave" class="section">
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">Leave Requests</h1>
+          <p class="page-subtitle">Submit and track your leave applications</p>
+        </div>
+        <button class="btn btn-primary" id="newLeaveBtn">+ New Request</button>
+      </div>
+
+      <!-- New Leave Form (hidden by default) -->
+      <div class="card mb-4 hidden" id="leaveFormCard">
+        <div class="card-title">
+          New Leave Request
+          <button class="btn btn-ghost btn-sm" id="cancelLeaveForm">Cancel</button>
+        </div>
+
+        <div class="alert" id="leaveAlert"></div>
+
+        <form id="leaveForm" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Leave Type *</label>
+              <select name="leave_type" required>
+                <option value="sick">Sick Leave</option>
+                <option value="casual">Casual Leave</option>
+                <option value="annual">Annual Leave</option>
+                <option value="emergency">Emergency Leave</option>
+                <option value="unpaid">Unpaid Leave</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Total Days</label>
+              <input type="text" id="totalDaysDisplay" readonly placeholder="Select dates first">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Start Date *</label>
+              <input type="date" name="start_date" required>
+            </div>
+            <div class="form-group">
+              <label>End Date *</label>
+              <input type="date" name="end_date" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Reason *</label>
+            <textarea name="reason" placeholder="Briefly explain your reason for leave…" required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Submit Request</button>
+        </form>
+      </div>
+
+      <!-- Leave Requests Table -->
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Days</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Admin Comment</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="leaveBody">
+              <tr><td colspan="8" class="text-center text-muted" style="padding:24px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECTION: Analytics ──────────────────────────────── -->
+    <section id="section-analytics" class="section">
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">My Analytics</h1>
+          <p class="page-subtitle">Personal attendance insights</p>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="analyticsStats">
+        <!-- filled by JS -->
+      </div>
+
+      <div class="card">
+        <div class="card-title">This Month's Breakdown</div>
+        <div id="analyticsBreakdown" style="padding: 20px 0; text-align: center; color: var(--text-2);">
+          Loading…
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module">
+  import { supabase, requireAuth, getUserProfile } from '../js/supabase-client.js';
+  import { clockIn, clockOut, getTodayRecord,
+           getAttendanceHistory, getMonthlySummary,
+           renderClockWidget }                      from '../js/attendance.js';
+  import { handleLogout }                           from '../js/auth.js';
+  import { formatDate, formatTime, todayISO,
+           statusBadge, showAlert, setLoading,
+           daysBetween, capitalize,
+           getCurrentMonthYear }                    from '../js/utils.js';
+
+  // ── Auth guard ────────────────────────────────────────────
+  const user    = await requireAuth();
+  if (!user) throw new Error('redirecting');
+  const profile = await getUserProfile(user.id);
+
+  // ── Populate sidebar user ─────────────────────────────────
+  const initials = (profile.full_name || 'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatarEl').textContent   = initials;
+  document.getElementById('userNameEl').textContent = profile.full_name || user.email;
+
+  // ── Greeting ───────────────────────────────────────────────
+  const hr = new Date().getHours();
+  const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greetingEl').textContent =
+    `${greeting}, ${profile.full_name?.split(' ')[0] || 'there'} 👋`;
+
+  // ── Live clock ─────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('liveTime').textContent = now.toLocaleTimeString('en-US', { hour12: true });
+    document.getElementById('liveDate').textContent = now.toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── Navigation ─────────────────────────────────────────────
+  const sections = document.querySelectorAll('.section');
+  const navItems = document.querySelectorAll('.nav-item[data-section]');
+
+  navItems.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.section;
+      sections.forEach(s => s.classList.remove('active'));
+      navItems.forEach(n => n.classList.remove('active'));
+      document.getElementById(`section-${target}`).classList.add('active');
+      btn.classList.add('active');
+      if (target === 'attendance') loadHistory();
+      if (target === 'leave')      loadLeaves();
+      if (target === 'analytics')  loadAnalytics();
+    });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  // ── Load today's record & clock widget ────────────────────
+  let todayRecord = await getTodayRecord(user.id);
+  renderClockWidget(todayRecord, {});
+
+  // Clock In
+  document.getElementById('clockInBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('clockInBtn');
+    setLoading(btn, true, 'Clocking in…');
+    const { data, error } = await clockIn(user.id);
+    setLoading(btn, false);
+    if (error) return alert(error);
+    todayRecord = data;
+    renderClockWidget(todayRecord, {});
+    loadHomeStats();
+    loadRecentAttendance();
+  });
+
+  // Clock Out
+  document.getElementById('clockOutBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('clockOutBtn');
+    setLoading(btn, true, 'Clocking out…');
+    const { data, error } = await clockOut(user.id);
+    setLoading(btn, false);
+    if (error) return alert(error);
+    todayRecord = data;
+    renderClockWidget(todayRecord, {});
+    loadHomeStats();
+    loadRecentAttendance();
+  });
+
+  // ── Home stats ─────────────────────────────────────────────
+  async function loadHomeStats() {
+    const { month, year } = getCurrentMonthYear();
+    const summary = await getMonthlySummary(user.id, month, year);
+    if (summary) {
+      document.getElementById('statPresent').textContent = summary.present_days + summary.late_days;
+      document.getElementById('statLate').textContent    = summary.late_days;
+      document.getElementById('statHours').textContent   = summary.total_hours + 'h';
+    }
+
+    // Pending leaves count
+    const { count } = await supabase
+      .from('leave_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+    document.getElementById('statLeave').textContent = count ?? 0;
+  }
+  loadHomeStats();
+
+  // ── Recent attendance (home section) ──────────────────────
+  async function loadRecentAttendance() {
+    const records = await getAttendanceHistory(user.id, { limit: 7 });
+    const body    = document.getElementById('recentBody');
+
+    if (!records.length) {
+      body.innerHTML = `<tr><td colspan="5">
+        <div class="empty-state"><div class="icon">📋</div>
+        <h3>No records yet</h3><p>Clock in to start tracking</p></div>
+      </td></tr>`;
+      return;
+    }
+
+    body.innerHTML = records.map(r => `
+      <tr>
+        <td>${formatDate(r.date)}</td>
+        <td>${formatTime(r.clock_in)}</td>
+        <td>${r.clock_out ? formatTime(r.clock_out) : '<span class="text-muted">—</span>'}</td>
+        <td>${r.total_hours != null ? r.total_hours + 'h' : '—'}</td>
+        <td>${statusBadge(r.status)}</td>
+      </tr>
+    `).join('');
+  }
+  loadRecentAttendance();
+
+  // ── Attendance History section ─────────────────────────────
+  const curYear = new Date().getFullYear();
+  const yearSel = document.getElementById('histYear');
+  for (let y = curYear; y >= curYear - 3; y--) {
+    yearSel.innerHTML += `<option value="${y}" ${y===curYear?'selected':''}>${y}</option>`;
+  }
+
+  async function loadHistory() {
+    const month  = parseInt(document.getElementById('histMonth').value) || null;
+    const year   = parseInt(document.getElementById('histYear').value)  || curYear;
+    const records = await getAttendanceHistory(user.id, { month, year });
+    const body    = document.getElementById('historyBody');
+
+    if (!records.length) {
+      body.innerHTML = `<tr><td colspan="6">
+        <div class="empty-state"><div class="icon">📭</div>
+        <h3>No records found</h3></div>
+      </td></tr>`;
+      return;
+    }
+
+    body.innerHTML = records.map(r => `
+      <tr>
+        <td>${formatDate(r.date)}</td>
+        <td>${formatTime(r.clock_in)}</td>
+        <td>${r.clock_out ? formatTime(r.clock_out) : '—'}</td>
+        <td>${r.total_hours != null ? r.total_hours + 'h' : '—'}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${r.notes || '—'}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('histFilterBtn').addEventListener('click', loadHistory);
+
+  // ── Leave section ──────────────────────────────────────────
+  document.getElementById('newLeaveBtn').addEventListener('click', () => {
+    document.getElementById('leaveFormCard').classList.remove('hidden');
+    document.getElementById('newLeaveBtn').classList.add('hidden');
+  });
+
+  document.getElementById('cancelLeaveForm').addEventListener('click', () => {
+    document.getElementById('leaveFormCard').classList.add('hidden');
+    document.getElementById('newLeaveBtn').classList.remove('hidden');
+    document.getElementById('leaveForm').reset();
+  });
+
+  // Auto-calculate total days
+  const leaveForm = document.getElementById('leaveForm');
+  function recalcDays() {
+    const s = leaveForm.start_date.value;
+    const e = leaveForm.end_date.value;
+    if (s && e && e >= s) {
+      document.getElementById('totalDaysDisplay').value = daysBetween(s, e) + ' day(s)';
+    }
+  }
+  leaveForm.start_date.addEventListener('change', recalcDays);
+  leaveForm.end_date.addEventListener('change', recalcDays);
+
+  // Set minimum date to today
+  leaveForm.start_date.min = todayISO();
+  leaveForm.end_date.min   = todayISO();
+
+  leaveForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = leaveForm.querySelector('[type="submit"]');
+    const alertEl = document.getElementById('leaveAlert');
+    const fd = new FormData(leaveForm);
+
+    const startDate = fd.get('start_date');
+    const endDate   = fd.get('end_date');
+    const reason    = fd.get('reason').trim();
+    const leaveType = fd.get('leave_type');
+
+    if (!startDate || !endDate || !reason) {
+      return showAlert(alertEl, 'Please fill in all fields.', 'error');
+    }
+    if (endDate < startDate) {
+      return showAlert(alertEl, 'End date must be on or after start date.', 'error');
+    }
+
+    setLoading(btn, true, 'Submitting…');
+
+    const { error } = await supabase.from('leave_requests').insert({
+      user_id:    user.id,
+      leave_type: leaveType,
+      start_date: startDate,
+      end_date:   endDate,
+      total_days: daysBetween(startDate, endDate),
+      reason,
+      status:     'pending'
+    });
+
+    setLoading(btn, false);
+
+    if (error) return showAlert(alertEl, error.message, 'error');
+
+    showAlert(alertEl, 'Leave request submitted successfully!', 'success');
+    leaveForm.reset();
+    setTimeout(() => {
+      document.getElementById('leaveFormCard').classList.add('hidden');
+      document.getElementById('newLeaveBtn').classList.remove('hidden');
+      loadLeaves();
+    }, 1500);
+  });
+
+  async function loadLeaves() {
+    const { data: leaves } = await supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    const body = document.getElementById('leaveBody');
+
+    if (!leaves?.length) {
+      body.innerHTML = `<tr><td colspan="8">
+        <div class="empty-state"><div class="icon">🏖️</div>
+        <h3>No leave requests yet</h3></div>
+      </td></tr>`;
+      return;
+    }
+
+    body.innerHTML = leaves.map(l => `
+      <tr>
+        <td>${capitalize(l.leave_type)}</td>
+        <td>${formatDate(l.start_date)}</td>
+        <td>${formatDate(l.end_date)}</td>
+        <td>${l.total_days}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.reason}</td>
+        <td>${statusBadge(l.status)}</td>
+        <td>${l.admin_comment || '—'}</td>
+        <td>
+          ${l.status === 'pending'
+            ? `<button class="btn btn-outline btn-sm" onclick="cancelLeave('${l.id}')">Cancel</button>`
+            : '—'
+          }
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Make cancelLeave accessible from inline onclick
+  window.cancelLeave = async (id) => {
+    if (!confirm('Cancel this leave request?')) return;
+    const { error } = await supabase
+      .from('leave_requests')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .eq('user_id', user.id);
+    if (!error) loadLeaves();
+  };
+
+  // ── Analytics section ──────────────────────────────────────
+  async function loadAnalytics() {
+    const { month, year } = getCurrentMonthYear();
+    const summary = await getMonthlySummary(user.id, month, year);
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    document.getElementById('analyticsStats').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div>
+          <div class="stat-value">${summary ? Number(summary.present_days) : 0}</div>
+          <div class="stat-label">On Time Days</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">⏰</div>
+        <div>
+          <div class="stat-value">${summary ? Number(summary.late_days) : 0}</div>
+          <div class="stat-label">Late Days</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">📅</div>
+        <div>
+          <div class="stat-value">${summary ? Number(summary.half_days) : 0}</div>
+          <div class="stat-label">Half Days</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple">⌚</div>
+        <div>
+          <div class="stat-value">${summary ? Number(summary.total_hours) : 0}h</div>
+          <div class="stat-label">Total Hours — ${months[month-1]} ${year}</div>
+        </div>
+      </div>
+    `;
+
+    const totalDays = summary ? Number(summary.total_days) : 0;
+    const presentPct = totalDays
+      ? Math.round((Number(summary.present_days) + Number(summary.late_days)) / totalDays * 100)
+      : 0;
+
+    document.getElementById('analyticsBreakdown').innerHTML = `
+      <div style="max-width:400px; margin:0 auto;">
+        <p style="font-size:48px; font-weight:700; color:var(--accent); font-family:var(--font-display)">
+          ${presentPct}%
+        </p>
+        <p style="color:var(--text-2); margin-bottom:24px;">Attendance Rate for ${months[month-1]} ${year}</p>
+        <div style="background:var(--surface2); border-radius:8px; overflow:hidden; height:12px;">
+          <div style="height:100%; width:${presentPct}%; background:var(--accent); border-radius:8px; transition:width 0.5s;"></div>
+        </div>
+        <p style="margin-top:12px; font-size:13px; color:var(--text-3);">
+          ${totalDays} working days recorded this month
+        </p>
+      </div>
+    `;
+  }
+
+</script>
+
+</body>
+</html>

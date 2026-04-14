@@ -1,0 +1,104 @@
+/* css/auth.css — Auth Page Styles */
+
+.auth-page {
+  min-height: 100vh;
+  display:    flex;
+  align-items:    center;
+  justify-content: center;
+  padding:    20px;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 15% 25%, rgba(79,126,247,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 75%, rgba(124,93,249,0.06) 0%, transparent 50%);
+}
+
+.auth-card {
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding:       44px 40px;
+  width:         100%;
+  max-width:     440px;
+  box-shadow:    var(--shadow);
+}
+
+.auth-logo {
+  font-family:   var(--font-display);
+  font-size:     26px;
+  font-weight:   700;
+  margin-bottom: 6px;
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+}
+.auth-logo .accent { color: var(--accent); }
+
+.auth-tagline {
+  color:         var(--text-3);
+  font-size:     14px;
+  margin-bottom: 32px;
+}
+
+.auth-title {
+  font-size:     22px;
+  font-weight:   700;
+  margin-bottom: 4px;
+}
+
+.auth-subtitle {
+  color:         var(--text-2);
+  font-size:     14px;
+  margin-bottom: 28px;
+}
+
+.auth-divider {
+  display:     flex;
+  align-items: center;
+  gap:         12px;
+  margin:      20px 0;
+  color:       var(--text-3);
+  font-size:   13px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content:    '';
+  flex:       1;
+  height:     1px;
+  background: var(--border);
+}
+
+.auth-footer {
+  text-align:  center;
+  margin-top:  24px;
+  color:       var(--text-3);
+  font-size:   14px;
+}
+
+.auth-footer a { color: var(--accent); font-weight: 500; }
+
+/* Password strength indicator */
+.password-strength {
+  height:        4px;
+  border-radius: 2px;
+  background:    var(--border);
+  margin-top:    6px;
+  overflow:      hidden;
+}
+.password-strength-bar {
+  height:     100%;
+  border-radius: 2px;
+  transition: width 0.3s, background 0.3s;
+  width:      0%;
+}
+
+/* Success state for verify page */
+.verify-icon {
+  font-size:     56px;
+  margin-bottom: 16px;
+  display:       block;
+}
+
+@media (max-width: 480px) {
+  .auth-card    { padding: 28px 20px; }
+  .auth-logo    { font-size: 22px; }
+}

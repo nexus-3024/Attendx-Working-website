@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — AttendX</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">🏢 Attend<span class="accent">X</span></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Navigation</div>
+      <a class="nav-item" href="/dashboard/admin.html">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a class="nav-item active">
+        <span class="nav-icon">📈</span> Analytics
+      </a>
+      <button class="nav-item" id="logoutBtn">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="avatarEl">A</div>
+      <div>
+        <div class="user-info-name" id="userNameEl">Admin</div>
+        <div class="user-info-role" style="color:var(--warning)">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Attendance Analytics</h1>
+        <p class="page-subtitle">Visual insights across your organization</p>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <select id="anaMonth" style="width:auto;padding:8px 12px;font-size:13px">
+          <option value="1">January</option>  <option value="2">February</option>
+          <option value="3">March</option>     <option value="4">April</option>
+          <option value="5">May</option>       <option value="6">June</option>
+          <option value="7">July</option>      <option value="8">August</option>
+          <option value="9">September</option> <option value="10">October</option>
+          <option value="11">November</option> <option value="12">December</option>
+        </select>
+        <select id="anaYear" style="width:auto;padding:8px 12px;font-size:13px"></select>
+        <button class="btn btn-primary btn-sm" id="anaLoadBtn">Load</button>
+      </div>
+    </div>
+
+    <!-- ── Summary rings row ────────────────────────────────── -->
+    <div style="
+      display:               grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap:                   16px;
+      margin-bottom:         24px;
+    " id="summaryRings">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- ── Daily attendance bar chart ───────────────────────── -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Daily Attendance — <span id="chartMonthLabel"></span></div>
+      <div id="dailyChart">
+        <div class="text-muted text-center" style="padding:40px">
+          Select a month and click Load
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 6-month trend chart ────────────────────────────────── -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">6-Month Attendance Trend</div>
+      <div id="trendChart">
+        <div class="text-muted text-center" style="padding:40px">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ── Status breakdown for the month ───────────────────── -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+
+      <div class="card">
+        <div class="card-title">Attendance Status Breakdown</div>
+        <div id="statusBreakdown" style="padding:12px 0">
+          <div class="text-muted text-center">Load a month to see data</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Department Summary</div>
+        <div id="deptSummary" style="padding:12px 0">
+          <div class="text-muted text-center">Load a month to see data</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Per-employee detail table ────────────────────────── -->
+    <div class="card">
+      <div class="card-title">
+        Per-Employee Detail
+        <button class="btn btn-outline btn-sm hidden" id="anaExportBtn">⬇ Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Present</th>
+              <th>Late</th>
+              <th>Half Day</th>
+              <th>Total Hours</th>
+              <th>Avg Hours/Day</th>
+              <th>Attendance %</th>
+            </tr>
+          </thead>
+          <tbody id="detailBody">
+            <tr><td colspan="7" class="text-center text-muted" style="padding:24px">
+              Load a month to see data
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module">
+  import { requireAdmin }                      from '../js/supabase-client.js';
+  import { getDailyBreakdown, getSixMonthTrend,
+           renderBarChart, renderRing }         from '../js/analytics.js';
+  import { getEmployeeMonthlySummaries }        from '../js/admin.js';
+  import { handleLogout }                       from '../js/auth.js';
+  import { exportCSV, getCurrentMonthYear }     from '../js/utils.js';
+
+  const { user, profile } = await requireAdmin() || {};
+  if (!user) throw new Error('redirect');
+
+  const initials = (profile.full_name||'A').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatarEl').textContent   = initials;
+  document.getElementById('userNameEl').textContent = profile.full_name;
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  // Populate year selector
+  const curYear  = new Date().getFullYear();
+  const curMonth = new Date().getMonth() + 1;
+  const yearSel  = document.getElementById('anaYear');
+  for (let y = curYear; y >= curYear - 3; y--) {
+    yearSel.innerHTML += `<option value="${y}" ${y===curYear?'selected':''}>${y}</option>`;
+  }
+  document.getElementById('anaMonth').value = curMonth;
+
+  const MONTH_NAMES = ['January','February','March','April','May','June',
+                       'July','August','September','October','November','December'];
+  const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun',
+                        'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  let currentSummaries = [];
+
+  async function loadAnalytics() {
+    const month  = parseInt(document.getElementById('anaMonth').value);
+    const year   = parseInt(document.getElementById('anaYear').value);
+    const btn    = document.getElementById('anaLoadBtn');
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+
+    document.getElementById('chartMonthLabel').textContent =
+      `${MONTH_NAMES[month-1]} ${year}`;
+
+    // Run data fetches in parallel
+    const [daily, summaries] = await Promise.all([
+      getDailyBreakdown(month, year),
+      getEmployeeMonthlySummaries(month, year)
+    ]);
+
+    currentSummaries = summaries;
+    btn.disabled     = false;
+    btn.textContent  = 'Load';
+
+    // ── Summary ring stats ─────────────────────────────────
+    const totalPresent  = summaries.reduce((s, r) => s + r.present, 0);
+    const totalLate     = summaries.reduce((s, r) => s + r.late, 0);
+    const totalHalfDay  = summaries.reduce((s, r) => s + r.half_day, 0);
+    const totalHours    = Math.round(summaries.reduce((s,r) => s + r.total_hours, 0) * 10) / 10;
+    const totalDays     = totalPresent + totalLate + totalHalfDay;
+
+    // Working days in the month
+    let workDays = 0;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = new Date(year, month-1, d).getDay();
+      if (dow !== 0 && dow !== 6) workDays++;
+    }
+    const expectedDays = workDays * summaries.length;
+    const pct = expectedDays > 0 ? Math.round((totalDays / expectedDays) * 100) : 0;
+
+    document.getElementById('summaryRings').innerHTML = `
+      <div class="card" style="text-align:center">
+        <div class="card-title" style="justify-content:center">Attendance Rate</div>
+        <div style="display:flex;justify-content:center;margin:12px 0" id="ring1"></div>
+        <div class="text-muted">${totalDays} / ${expectedDays} expected days</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title" style="justify-content:center">On Time</div>
+        <div style="font-size:40px;font-weight:700;color:var(--success);font-family:var(--font-display)">${totalPresent}</div>
+        <div class="text-muted">days this month</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title" style="justify-content:center">Late Arrivals</div>
+        <div style="font-size:40px;font-weight:700;color:var(--warning);font-family:var(--font-display)">${totalLate}</div>
+        <div class="text-muted">days this month</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title" style="justify-content:center">Total Hours</div>
+        <div style="font-size:40px;font-weight:700;color:var(--accent);font-family:var(--font-display)">${totalHours}h</div>
+        <div class="text-muted">across all employees</div>
+      </div>
+    `;
+    renderRing(document.getElementById('ring1'), pct);
+
+    // ── Daily bar chart ────────────────────────────────────
+    const chartData = daily.map(d => ({
+      label: String(new Date(d.date + 'T00:00:00').getDate()),
+      value: d.count,
+      color: d.isWeekend
+        ? 'var(--surface2)'
+        : d.count === 0
+          ? 'var(--danger-dim)'
+          : 'var(--accent)'
+    }));
+    renderBarChart(document.getElementById('dailyChart'), chartData, {
+      height: 140, showValues: true
+    });
+
+    // ── Status breakdown ───────────────────────────────────
+    const statuses = [
+      { label: 'Present',  value: totalPresent, color: 'var(--success)' },
+      { label: 'Late',     value: totalLate,    color: 'var(--warning)' },
+      { label: 'Half Day', value: totalHalfDay, color: 'var(--accent)'  }
+    ];
+    const maxStatus = Math.max(...statuses.map(s => s.value), 1);
+
+    document.getElementById('statusBreakdown').innerHTML = statuses.map(s => `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="width:80px;font-size:13px;color:var(--text-2)">${s.label}</div>
+        <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(s.value/maxStatus*100)}%;
+            background:${s.color};border-radius:5px;transition:width 0.4s"></div>
+        </div>
+        <div style="width:32px;text-align:right;font-weight:600;font-size:14px">${s.value}</div>
+      </div>
+    `).join('');
+
+    // ── Department summary ─────────────────────────────────
+    const byDept = {};
+    summaries.forEach(s => {
+      if (!byDept[s.department]) byDept[s.department] = { hours: 0, employees: 0 };
+      byDept[s.department].hours     += s.total_hours;
+      byDept[s.department].employees += 1;
+    });
+
+    const deptRows = Object.entries(byDept)
+      .sort((a,b) => b[1].hours - a[1].hours);
+
+    document.getElementById('deptSummary').innerHTML = deptRows.length
+      ? deptRows.map(([dept, d]) => `
+          <div style="display:flex;justify-content:space-between;
+            align-items:center;padding:10px 0;
+            border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-weight:500;color:var(--text)">${dept}</div>
+              <div style="font-size:12px;color:var(--text-3)">${d.employees} employee${d.employees>1?'s':''}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:600;color:var(--accent)">${Math.round(d.hours*10)/10}h</div>
+              <div style="font-size:12px;color:var(--text-3)">total hours</div>
+            </div>
+          </div>
+        `).join('')
+      : '<div class="text-muted text-center">No department data</div>';
+
+    // ── Per-employee detail table ──────────────────────────
+    const tbody     = document.getElementById('detailBody');
+    const exportBtn = document.getElementById('anaExportBtn');
+
+    if (!summaries.length) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state"><div class="icon">📭</div>
+        <h3>No data for this period</h3></div>
+      </td></tr>`;
+      exportBtn.classList.add('hidden');
+      return;
+    }
+
+    exportBtn.classList.remove('hidden');
+
+    tbody.innerHTML = summaries.map(row => {
+      const attended  = row.present + row.late + row.half_day;
+      const pctAtt    = workDays > 0
+        ? Math.round((attended / workDays) * 100) : 0;
+      const avgHours  = attended > 0
+        ? Math.round((row.total_hours / attended) * 10) / 10 : 0;
+      const pctColor  = pctAtt >= 80
+        ? 'var(--success)' : pctAtt >= 60
+        ? 'var(--warning)' : 'var(--danger)';
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight:500;color:var(--text)">${row.full_name}</div>
+            <div style="font-size:12px;color:var(--text-3)">${row.department}</div>
+          </td>
+          <td style="color:var(--success);font-weight:600">${row.present}</td>
+          <td style="color:var(--warning);font-weight:600">${row.late}</td>
+          <td>${row.half_day}</td>
+          <td><strong>${row.total_hours}h</strong></td>
+          <td>${avgHours}h</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:6px;background:var(--surface2);
+                border-radius:3px;overflow:hidden;min-width:60px">
+                <div style="height:100%;width:${pctAtt}%;
+                  background:${pctColor};border-radius:3px"></div>
+              </div>
+              <span style="font-size:13px;font-weight:600;
+                color:${pctColor};min-width:36px">${pctAtt}%</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('anaLoadBtn').addEventListener('click', loadAnalytics);
+
+  // Export button
+  document.getElementById('anaExportBtn').addEventListener('click', () => {
+    const month = parseInt(document.getElementById('anaMonth').value);
+    const year  = parseInt(document.getElementById('anaYear').value);
+    exportCSV(
+      `attendx_analytics_${SHORT_MONTHS[month-1]}_${year}.csv`,
+      currentSummaries.map(row => {
+        const attended = row.present + row.late + row.half_day;
+        return [
+          row.full_name, row.email, row.department,
+          row.present, row.late, row.half_day,
+          row.total_hours,
+          attended > 0 ? Math.round(row.total_hours / attended * 10) / 10 : 0
+        ];
+      }),
+      ['Name','Email','Department','Present','Late','Half Day',
+       'Total Hours','Avg Hours/Day']
+    );
+  });
+
+  // Load 6-month trend immediately (doesn't need month selector)
+  async function loadTrend() {
+    const trend = await getSixMonthTrend();
+    renderBarChart(
+      document.getElementById('trendChart'),
+      trend.map(t => ({ label: t.label, value: t.count })),
+      { height: 120, barColor: 'var(--accent)', showValues: true }
+    );
+  }
+  loadTrend();
+
+  // Load current month on page open
+  loadAnalytics();
+
+</script>
+
+</body>
+</html>

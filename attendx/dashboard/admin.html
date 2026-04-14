@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — AttendX</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <style>
+    /* Admin-specific overrides */
+    .admin-badge {
+      background:    var(--warning-dim);
+      color:         var(--warning);
+      font-size:     11px;
+      font-weight:   600;
+      padding:       2px 8px;
+      border-radius: 10px;
+      margin-left:   6px;
+    }
+
+    /* Leave review modal */
+    .modal-overlay {
+      display:         none;
+      position:        fixed;
+      inset:           0;
+      background:      rgba(0,0,0,0.7);
+      z-index:         200;
+      align-items:     center;
+      justify-content: center;
+      padding:         20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background:    var(--surface);
+      border:        1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding:       32px;
+      width:         100%;
+      max-width:     480px;
+      max-height:    90vh;
+      overflow-y:    auto;
+    }
+
+    .modal-title {
+      font-family:   var(--font-display);
+      font-size:     18px;
+      font-weight:   600;
+      margin-bottom: 20px;
+    }
+
+    .modal-field {
+      background:    var(--surface2);
+      border-radius: var(--radius-sm);
+      padding:       12px 16px;
+      margin-bottom: 12px;
+      font-size:     14px;
+    }
+    .modal-field .label {
+      font-size:   11px;
+      color:       var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .modal-field .value { color: var(--text); font-weight: 500; }
+
+    .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
+
+    /* User management */
+    .user-row-avatar {
+      width:           36px;
+      height:          36px;
+      border-radius:   50%;
+      background:      linear-gradient(135deg, var(--accent), #7c5df9);
+      display:         inline-flex;
+      align-items:     center;
+      justify-content: center;
+      font-weight:     700;
+      font-size:       13px;
+      color:           white;
+      flex-shrink:     0;
+      vertical-align:  middle;
+      margin-right:    10px;
+    }
+
+    /* Pending indicator in sidebar */
+    .nav-badge {
+      background:    var(--danger);
+      color:         white;
+      font-size:     11px;
+      font-weight:   700;
+      padding:       1px 7px;
+      border-radius: 10px;
+      margin-left:   auto;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      🏢 Attend<span class="accent">X</span>
+      <span class="admin-badge">Admin</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Management</div>
+
+      <button class="nav-item active" data-section="overview">
+        <span class="nav-icon">📊</span> Overview
+      </button>
+
+      <button class="nav-item" data-section="attendance">
+        <span class="nav-icon">📋</span> All Attendance
+      </button>
+
+      <button class="nav-item" data-section="leaves">
+        <span class="nav-icon">🏖️</span> Leave Requests
+        <span class="nav-badge hidden" id="pendingBadge">0</span>
+      </button>
+
+      <button class="nav-item" data-section="users">
+        <span class="nav-icon">👥</span> User Management
+      </button>
+      <a class="nav-item" href="/pages/analytics.html">
+        <span class="nav-icon">📈</span> Analytics
+      </a>
+
+      <button class="nav-item" data-section="reports">
+        <span class="nav-icon">📁</span> Reports
+      </button>
+
+      <div class="nav-section">Account</div>
+
+      <button class="nav-item" id="logoutBtn">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="avatarEl">A</div>
+      <div>
+        <div class="user-info-name" id="userNameEl">Admin</div>
+        <div class="user-info-role" style="color: var(--warning);">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ── SECTION: Overview ──────────────────────────────── -->
+    <section id="section-overview" class="section active">
+
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">Dashboard Overview</h1>
+          <p class="page-subtitle" id="overviewDate">Loading…</p>
+        </div>
+        <div id="liveClock"
+          style="font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--accent)">
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stats-grid" id="overviewStats">
+        <div class="stat-card">
+          <div class="stat-icon blue">👥</div>
+          <div><div class="stat-value" id="statTotal">—</div>
+               <div class="stat-label">Total Employees</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div><div class="stat-value" id="statPresent">—</div>
+               <div class="stat-label">Present Today</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red">❌</div>
+          <div><div class="stat-value" id="statAbsent">—</div>
+               <div class="stat-label">Absent Today</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon yellow">🏖️</div>
+          <div><div class="stat-value" id="statPending">—</div>
+               <div class="stat-label">Pending Leaves</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">⌚</div>
+          <div><div class="stat-value" id="statHours">—</div>
+               <div class="stat-label">Hours This Month</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon yellow">⏰</div>
+          <div><div class="stat-value" id="statLate">—</div>
+               <div class="stat-label">Late This Month</div></div>
+        </div>
+      </div>
+
+      <!-- Today's attendance snapshot -->
+      <div class="card">
+        <div class="card-title">
+          Today's Attendance Snapshot
+          <button class="btn btn-outline btn-sm" id="refreshOverviewBtn">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
+                <th>Hours</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="todayBody">
+              <tr><td colspan="6" class="text-center text-muted" style="padding:24px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── SECTION: All Attendance ────────────────────────── -->
+    <section id="section-attendance" class="section">
+
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">All Attendance Records</h1>
+          <p class="page-subtitle">Filter and browse every employee's clock-in/out history</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <select id="attMonth">
+            <option value="">All Months</option>
+            <option value="1">January</option>  <option value="2">February</option>
+            <option value="3">March</option>     <option value="4">April</option>
+            <option value="5">May</option>       <option value="6">June</option>
+            <option value="7">July</option>      <option value="8">August</option>
+            <option value="9">September</option> <option value="10">October</option>
+            <option value="11">November</option> <option value="12">December</option>
+          </select>
+          <select id="attYear"></select>
+          <select id="attStatus">
+            <option value="">All Status</option>
+            <option value="present">Present</option>
+            <option value="late">Late</option>
+            <option value="half_day">Half Day</option>
+          </select>
+          <select id="attEmployee">
+            <option value="">All Employees</option>
+          </select>
+          <button class="btn btn-primary btn-sm" id="attFilterBtn">Filter</button>
+          <button class="btn btn-outline btn-sm" id="attClearBtn">Clear</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Date</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
+                <th>Hours</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="attBody">
+              <tr><td colspan="7" class="text-center text-muted" style="padding:24px">
+                Apply a filter to load records
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="attCount" class="text-muted" style="margin-top:12px;font-size:13px;"></div>
+      </div>
+
+    </section>
+
+    <!-- ── SECTION: Leave Requests ────────────────────────── -->
+    <section id="section-leaves" class="section">
+
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">Leave Requests</h1>
+          <p class="page-subtitle">Review and action employee leave applications</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <select id="leaveFilter" style="min-width:160px">
+            <option value="pending">Pending Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="all">All Requests</option>
+          </select>
+          <button class="btn btn-outline btn-sm" id="leaveRefreshBtn">↻ Refresh</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Days</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="leaveBody">
+              <tr><td colspan="8" class="text-center text-muted" style="padding:24px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── SECTION: User Management ───────────────────────── -->
+    <section id="section-users" class="section">
+
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">User Management</h1>
+          <p class="page-subtitle">Manage employee accounts, roles, and status</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <select id="userFilter">
+            <option value="">All Users</option>
+            <option value="employee">Employees Only</option>
+            <option value="admin">Admins Only</option>
+          </select>
+          <button class="btn btn-outline btn-sm" id="userRefreshBtn">↻ Refresh</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody">
+              <tr><td colspan="7" class="text-center text-muted" style="padding:24px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── SECTION: Reports ────────────────────────────────── -->
+    <section id="section-reports" class="section">
+
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">Monthly Reports</h1>
+          <p class="page-subtitle">Per-employee attendance summary with CSV export</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="filter-bar">
+          <select id="reportMonth">
+            <option value="1">January</option>  <option value="2">February</option>
+            <option value="3">March</option>     <option value="4">April</option>
+            <option value="5">May</option>       <option value="6">June</option>
+            <option value="7">July</option>      <option value="8">August</option>
+            <option value="9">September</option> <option value="10">October</option>
+            <option value="11">November</option> <option value="12">December</option>
+          </select>
+          <select id="reportYear"></select>
+          <button class="btn btn-primary btn-sm" id="reportLoadBtn">Load Report</button>
+          <button class="btn btn-outline btn-sm hidden" id="reportExportBtn">
+            ⬇ Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Days Present</th>
+                <th>Late Days</th>
+                <th>Half Days</th>
+                <th>Total Hours</th>
+                <th>Attendance %</th>
+              </tr>
+            </thead>
+            <tbody id="reportBody">
+              <tr><td colspan="7" class="text-center text-muted" style="padding:24px">
+                Select a month and click "Load Report"
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+</div>
+
+<!-- ══ LEAVE REVIEW MODAL ═══════════════════════════════════ -->
+<div class="modal-overlay" id="leaveModal">
+  <div class="modal">
+    <div class="modal-title">Review Leave Request</div>
+
+    <div class="modal-field">
+      <div class="label">Employee</div>
+      <div class="value" id="mEmployee">—</div>
+    </div>
+    <div class="modal-field">
+      <div class="label">Leave Type</div>
+      <div class="value" id="mType">—</div>
+    </div>
+    <div class="modal-field">
+      <div class="label">Period</div>
+      <div class="value" id="mPeriod">—</div>
+    </div>
+    <div class="modal-field">
+      <div class="label">Reason</div>
+      <div class="value" id="mReason">—</div>
+    </div>
+
+    <div class="form-group" style="margin-top:16px">
+      <label>Admin Comment
+        <span class="text-muted" style="font-weight:400">(required for rejection)</span>
+      </label>
+      <textarea id="adminComment" rows="3"
+        placeholder="Add a comment for the employee…"></textarea>
+    </div>
+
+    <div class="alert" id="modalAlert"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-success btn-full" id="approveBtn">✅ Approve</button>
+      <button class="btn btn-danger btn-full"  id="rejectBtn">❌ Reject</button>
+      <button class="btn btn-ghost btn-sm"     id="closeModalBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase, requireAdmin }          from '../js/supabase-client.js';
+  import { getAllLeaves, approveLeave,
+           rejectLeave, getLeaveStats }      from '../js/leave.js';
+  import { getAllAttendance, getAllProfiles,
+           getAdminOverview,
+           getEmployeeMonthlySummaries,
+           setUserActive, setUserRole }      from '../js/admin.js';
+  import { handleLogout }                    from '../js/auth.js';
+  import { formatDate, formatTime, todayISO,
+           statusBadge, showAlert, setLoading,
+           capitalize, exportCSV,
+           getCurrentMonthYear }             from '../js/utils.js';
+
+  // ── Auth guard (admin only) ───────────────────────────────
+  const { user, profile } = await requireAdmin() || {};
+  if (!user) throw new Error('redirecting');
+
+  // ── Sidebar user info ─────────────────────────────────────
+  const initials = (profile.full_name||'A').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatarEl').textContent   = initials;
+  document.getElementById('userNameEl').textContent = profile.full_name || user.email;
+
+  // ── Live clock ────────────────────────────────────────────
+  const clockEl = document.getElementById('liveClock');
+  const dateEl  = document.getElementById('overviewDate');
+  function tick() {
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('en-US', { hour12: true });
+    dateEl.textContent  = now.toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+  tick(); setInterval(tick, 1000);
+
+  // ── Navigation ─────────────────────────────────────────────
+  const sections = document.querySelectorAll('.section');
+  const navItems = document.querySelectorAll('.nav-item[data-section]');
+
+  navItems.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.section;
+      sections.forEach(s => s.classList.remove('active'));
+      navItems.forEach(n => n.classList.remove('active'));
+      document.getElementById(`section-${target}`).classList.add('active');
+      btn.classList.add('active');
+      if (target === 'overview')   loadOverview();
+      if (target === 'attendance') loadAttendanceSection();
+      if (target === 'leaves')     loadLeaves();
+      if (target === 'users')      loadUsers();
+      if (target === 'reports')    initReportSection();
+    });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  // ════════════════════════════════════════════════════════════
+  // OVERVIEW
+  // ════════════════════════════════════════════════════════════
+  async function loadOverview() {
+    // Stat cards
+    const stats = await getAdminOverview();
+    document.getElementById('statTotal').textContent   = stats.totalEmployees;
+    document.getElementById('statPresent').textContent = stats.presentToday;
+    document.getElementById('statAbsent').textContent  = stats.absentToday;
+    document.getElementById('statPending').textContent = stats.pendingLeaves;
+    document.getElementById('statHours').textContent   = stats.totalHoursMonth + 'h';
+    document.getElementById('statLate').textContent    = stats.lateCount;
+
+    // Update pending badge in sidebar
+    const badge = document.getElementById('pendingBadge');
+    if (stats.pendingLeaves > 0) {
+      badge.textContent = stats.pendingLeaves;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+
+    // Today's snapshot table
+    const today   = todayISO();
+    const records = await getAllAttendance({ month: null, year: null });
+    const todayRecords = records.filter(r => r.date === today);
+    const tbody   = document.getElementById('todayBody');
+
+    if (!todayRecords.length) {
+      tbody.innerHTML = `<tr><td colspan="6">
+        <div class="empty-state">
+          <div class="icon">🌅</div>
+          <h3>No one has clocked in yet today</h3>
+        </div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = todayRecords.map(r => `
+      <tr>
+        <td>
+          <strong style="color:var(--text)">${r.full_name}</strong>
+        </td>
+        <td>${r.department}</td>
+        <td>${formatTime(r.clock_in)}</td>
+        <td>${r.clock_out ? formatTime(r.clock_out) : '<span class="text-muted">—</span>'}</td>
+        <td>${r.total_hours != null ? r.total_hours + 'h' : '—'}</td>
+        <td>${statusBadge(r.status)}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('refreshOverviewBtn')
+    .addEventListener('click', loadOverview);
+
+  // Initial load
+  loadOverview();
+
+  // ════════════════════════════════════════════════════════════
+  // ALL ATTENDANCE
+  // ════════════════════════════════════════════════════════════
+
+  // Populate year selectors
+  const curYear = new Date().getFullYear();
+  const curMonth = new Date().getMonth() + 1;
+
+  ['attYear', 'reportYear'].forEach(id => {
+    const sel = document.getElementById(id);
+    for (let y = curYear; y >= curYear - 3; y--) {
+      sel.innerHTML += `<option value="${y}" ${y===curYear?'selected':''}>${y}</option>`;
+    }
+  });
+
+  // Set current month as default
+  document.getElementById('attMonth').value   = curMonth;
+  document.getElementById('reportMonth').value = curMonth;
+
+  // Populate employee filter dropdown
+  async function populateEmployeeFilter() {
+    const profiles = await getAllProfiles();
+    const sel = document.getElementById('attEmployee');
+    profiles.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${p.full_name}</option>`;
+    });
+  }
+  populateEmployeeFilter();
+
+  async function loadAttendanceSection() {
+    const month    = parseInt(document.getElementById('attMonth').value)    || null;
+    const year     = parseInt(document.getElementById('attYear').value)     || curYear;
+    const status   = document.getElementById('attStatus').value             || null;
+    const userId   = document.getElementById('attEmployee').value           || null;
+
+    const records = await getAllAttendance({ month, year, userId, status });
+    const tbody   = document.getElementById('attBody');
+    const countEl = document.getElementById('attCount');
+
+    if (!records.length) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <h3>No records found for the selected filters</h3>
+        </div>
+      </td></tr>`;
+      countEl.textContent = '';
+      return;
+    }
+
+    countEl.textContent = `${records.length} record${records.length !== 1 ? 's' : ''} found`;
+
+    tbody.innerHTML = records.map(r => `
+      <tr>
+        <td>
+          <div style="font-weight:500;color:var(--text)">${r.full_name}</div>
+          <div style="font-size:12px;color:var(--text-3)">${r.department}</div>
+        </td>
+        <td>${formatDate(r.date)}</td>
+        <td>${formatTime(r.clock_in)}</td>
+        <td>${r.clock_out ? formatTime(r.clock_out) : '<span class="text-muted">—</span>'}</td>
+        <td>${r.total_hours != null ? r.total_hours + 'h' : '—'}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${r.notes || '—'}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('attFilterBtn').addEventListener('click', loadAttendanceSection);
+  document.getElementById('attClearBtn').addEventListener('click', () => {
+    document.getElementById('attMonth').value    = curMonth;
+    document.getElementById('attYear').value     = curYear;
+    document.getElementById('attStatus').value   = '';
+    document.getElementById('attEmployee').value = '';
+    loadAttendanceSection();
+  });
+
+  // ════════════════════════════════════════════════════════════
+  // LEAVE REQUESTS
+  // ════════════════════════════════════════════════════════════
+  let currentLeaveId   = null;
+  let currentLeaveData = null;
+
+  async function loadLeaves() {
+    const status  = document.getElementById('leaveFilter').value;
+    const records = await getAllLeaves({ status });
+    const tbody   = document.getElementById('leaveBody');
+
+    if (!records.length) {
+      tbody.innerHTML = `<tr><td colspan="8">
+        <div class="empty-state">
+          <div class="icon">🏖️</div>
+          <h3>No ${status === 'all' ? '' : status} leave requests</h3>
+        </div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = records.map(r => `
+      <tr>
+        <td>
+          <div style="font-weight:500;color:var(--text)">${r.full_name}</div>
+          <div style="font-size:12px;color:var(--text-3)">${r.department}</div>
+        </td>
+        <td>${capitalize(r.leave_type)}</td>
+        <td>${formatDate(r.start_date)}</td>
+        <td>${formatDate(r.end_date)}</td>
+        <td><strong>${r.total_days}</strong></td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+            title="${r.reason}">${r.reason}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>
+          ${r.status === 'pending'
+            ? `<button class="btn btn-outline btn-sm review-btn"
+                data-id="${r.id}">Review</button>`
+            : `<span class="text-muted" style="font-size:12px">
+                ${r.reviewed_by_name ? 'by ' + r.reviewed_by_name : '—'}
+               </span>`
+          }
+        </td>
+      </tr>
+    `).join('');
+
+    // Attach review button listeners
+    tbody.querySelectorAll('.review-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id   = btn.dataset.id;
+        const row  = records.find(r => r.id === id);
+        openLeaveModal(row);
+      });
+    });
+  }
+
+  document.getElementById('leaveFilter').addEventListener('change', loadLeaves);
+  document.getElementById('leaveRefreshBtn').addEventListener('click', loadLeaves);
+
+  // Load initial leave list
+  loadLeaves();
+
+  // ── Leave review modal ────────────────────────────────────
+  function openLeaveModal(row) {
+    currentLeaveId   = row.id;
+    currentLeaveData = row;
+
+    document.getElementById('mEmployee').textContent =
+      `${row.full_name} (${row.department})`;
+    document.getElementById('mType').textContent =
+      capitalize(row.leave_type) + ' Leave';
+    document.getElementById('mPeriod').textContent =
+      `${formatDate(row.start_date)} → ${formatDate(row.end_date)} (${row.total_days} day${row.total_days>1?'s':''})`;
+    document.getElementById('mReason').textContent  = row.reason;
+    document.getElementById('adminComment').value   = '';
+    document.getElementById('modalAlert').className = 'alert';
+
+    document.getElementById('leaveModal').classList.add('open');
+  }
+
+  function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('open');
+    currentLeaveId   = null;
+    currentLeaveData = null;
+  }
+
+  document.getElementById('closeModalBtn').addEventListener('click', closeLeaveModal);
+
+  // Click outside modal to close
+  document.getElementById('leaveModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeLeaveModal();
+  });
+
+  document.getElementById('approveBtn').addEventListener('click', async () => {
+    if (!currentLeaveId) return;
+    const btn     = document.getElementById('approveBtn');
+    const comment = document.getElementById('adminComment').value.trim();
+    setLoading(btn, true, 'Approving…');
+
+    const { error } = await approveLeave(currentLeaveId, user.id, comment);
+    setLoading(btn, false);
+
+    if (error) {
+      return showAlert('#modalAlert', error, 'error');
+    }
+    closeLeaveModal();
+    loadLeaves();
+    loadOverview(); // refresh pending count
+  });
+
+  document.getElementById('rejectBtn').addEventListener('click', async () => {
+    if (!currentLeaveId) return;
+    const btn     = document.getElementById('rejectBtn');
+    const comment = document.getElementById('adminComment').value.trim();
+    setLoading(btn, true, 'Rejecting…');
+
+    const { error } = await rejectLeave(currentLeaveId, user.id, comment);
+    setLoading(btn, false);
+
+    if (error) {
+      return showAlert('#modalAlert', error, 'error');
+    }
+    closeLeaveModal();
+    loadLeaves();
+    loadOverview();
+  });
+
+  // ════════════════════════════════════════════════════════════
+  // USER MANAGEMENT
+  // ════════════════════════════════════════════════════════════
+  async function loadUsers() {
+    const roleFilter = document.getElementById('userFilter').value;
+    const profiles   = await getAllProfiles();
+    const filtered   = roleFilter
+      ? profiles.filter(p => p.role === roleFilter)
+      : profiles;
+
+    const tbody = document.getElementById('usersBody');
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state">
+          <div class="icon">👥</div><h3>No users found</h3>
+        </div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(p => {
+      const initials = (p.full_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      const isCurrentUser = p.id === user.id;
+
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center">
+              <span class="user-row-avatar">${initials}</span>
+              <div>
+                <div style="font-weight:500;color:var(--text)">
+                  ${p.full_name}
+                  ${isCurrentUser ? '<span class="text-muted">(you)</span>' : ''}
+                </div>
+                <div style="font-size:12px;color:var(--text-3)">${p.phone || ''}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--text-2)">${p.email}</td>
+          <td>${p.department}</td>
+          <td>
+            ${isCurrentUser
+              ? statusBadge(p.role === 'admin' ? 'active' : 'inactive').replace('Active','Admin').replace('Inactive','Employee')
+              : `<select class="role-sel" data-id="${p.id}" style="width:auto;padding:4px 8px;font-size:13px">
+                   <option value="employee" ${p.role==='employee'?'selected':''}>Employee</option>
+                   <option value="admin"    ${p.role==='admin'   ?'selected':''}>Admin</option>
+                 </select>`
+            }
+          </td>
+          <td>
+            ${isCurrentUser
+              ? statusBadge('active')
+              : `<button class="btn btn-sm ${p.is_active ? 'btn-outline' : 'btn-success'} toggle-active-btn"
+                   data-id="${p.id}" data-active="${p.is_active}">
+                   ${p.is_active ? 'Deactivate' : 'Activate'}
+                 </button>`
+            }
+          </td>
+          <td style="color:var(--text-3);font-size:13px">
+            ${formatDate(p.created_at)}
+          </td>
+          <td>
+            ${isCurrentUser ? '<span class="text-muted">—</span>' : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Role change handlers
+    tbody.querySelectorAll('.role-sel').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const userId = sel.dataset.id;
+        const role   = sel.value;
+        if (!confirm(`Change this user's role to "${role}"?`)) {
+          await loadUsers(); // reset the select
+          return;
+        }
+        const { error } = await setUserRole(userId, role);
+        if (error) alert(error);
+        else loadUsers();
+      });
+    });
+
+    // Activate / Deactivate handlers
+    tbody.querySelectorAll('.toggle-active-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const userId   = btn.dataset.id;
+        const isActive = btn.dataset.active === 'true';
+        const action   = isActive ? 'deactivate' : 'activate';
+        if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+        const { error } = await setUserActive(userId, !isActive);
+        if (error) alert(error);
+        else loadUsers();
+      });
+    });
+  }
+
+  document.getElementById('userFilter').addEventListener('change', loadUsers);
+  document.getElementById('userRefreshBtn').addEventListener('click', loadUsers);
+
+  // ════════════════════════════════════════════════════════════
+  // REPORTS
+  // ════════════════════════════════════════════════════════════
+  let reportData = [];
+
+  function initReportSection() {
+    // just ensure year selector is populated (already done above)
+  }
+
+  async function loadReport() {
+    const month  = parseInt(document.getElementById('reportMonth').value);
+    const year   = parseInt(document.getElementById('reportYear').value);
+    const btn    = document.getElementById('reportLoadBtn');
+
+    setLoading(btn, true, 'Loading…');
+    reportData = await getEmployeeMonthlySummaries(month, year);
+    setLoading(btn, false);
+
+    const tbody     = document.getElementById('reportBody');
+    const exportBtn = document.getElementById('reportExportBtn');
+
+    if (!reportData.length) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <h3>No attendance data for this period</h3>
+        </div>
+      </td></tr>`;
+      exportBtn.classList.add('hidden');
+      return;
+    }
+
+    exportBtn.classList.remove('hidden');
+
+    // Working days in the month (rough: weekdays only)
+    const workingDays = countWorkingDays(year, month);
+
+    tbody.innerHTML = reportData.map(row => {
+      const attendedDays = row.present + row.late + row.half_day;
+      const pct          = workingDays
+        ? Math.round((attendedDays / workingDays) * 100)
+        : 0;
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight:500;color:var(--text)">${row.full_name}</div>
+            <div style="font-size:12px;color:var(--text-3)">${row.email}</div>
+          </td>
+          <td>${row.department}</td>
+          <td style="color:var(--success);font-weight:600">${row.present}</td>
+          <td style="color:var(--warning);font-weight:600">${row.late}</td>
+          <td style="color:var(--text-2)">${row.half_day}</td>
+          <td><strong>${row.total_hours}h</strong></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:${pct>=80?'var(--success)':pct>=60?'var(--warning)':'var(--danger)'};border-radius:3px"></div>
+              </div>
+              <span style="font-size:13px;font-weight:600;min-width:36px">${pct}%</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function countWorkingDays(year, month) {
+    let count = 0;
+    const days = new Date(year, month, 0).getDate();
+    for (let d = 1; d <= days; d++) {
+      const day = new Date(year, month - 1, d).getDay();
+      if (day !== 0 && day !== 6) count++; // skip Sun=0, Sat=6
+    }
+    return count;
+  }
+
+  document.getElementById('reportLoadBtn').addEventListener('click', loadReport);
+
+  document.getElementById('reportExportBtn').addEventListener('click', () => {
+    const month  = document.getElementById('reportMonth').value;
+    const year   = document.getElementById('reportYear').value;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    exportCSV(
+      `attendx_report_${months[month-1]}_${year}.csv`,
+      reportData.map(row => [
+        row.full_name,
+        row.email,
+        row.department,
+        row.present,
+        row.late,
+        row.half_day,
+        row.total_hours
+      ]),
+      ['Name','Email','Department','Present Days','Late Days','Half Days','Total Hours']
+    );
+  });
+
+</script>
+
+</body>
+</html>

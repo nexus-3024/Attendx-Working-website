@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Email — AttendX</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+
+  <div class="auth-card text-center">
+
+    <div class="auth-logo" style="justify-content: center;">
+      🏢 <span>Attend<span class="accent">X</span></span>
+    </div>
+
+    <!-- State 1: Waiting for email verification -->
+    <div id="state-pending">
+      <span class="verify-icon">📧</span>
+      <h1 class="auth-title">Check your email</h1>
+      <p class="auth-subtitle">
+        We sent a verification link to<br>
+        <strong id="emailDisplay" class="text-accent"></strong>
+      </p>
+
+      <div style="background: var(--surface2); border-radius: var(--radius); padding: 20px; margin: 24px 0; text-align: left;">
+        <p style="font-size: 14px; color: var(--text-2); margin-bottom: 12px;"><strong>Next steps:</strong></p>
+        <ol style="font-size: 14px; color: var(--text-2); padding-left: 20px; line-height: 2;">
+          <li>Open your email inbox</li>
+          <li>Find the email from AttendX</li>
+          <li>Click the <strong>"Confirm your email"</strong> link</li>
+          <li>You'll be redirected back to sign in</li>
+        </ol>
+      </div>
+
+      <p class="text-muted" style="font-size: 13px;">
+        Didn't receive it? Check your spam folder or
+        <a href="#" id="resendBtn">resend the email</a>.
+      </p>
+
+      <div class="alert" id="resendAlert" style="margin-top: 16px;"></div>
+    </div>
+
+    <!-- State 2: Successfully verified (shown after clicking email link) -->
+    <div id="state-verified" class="hidden">
+      <span class="verify-icon">✅</span>
+      <h1 class="auth-title">Email verified!</h1>
+      <p class="auth-subtitle">
+        Your account is ready. You can now sign in.
+      </p>
+      <a href="/login.html" class="btn btn-primary btn-full btn-lg" style="margin-top: 16px;">
+        Sign In Now
+      </a>
+    </div>
+
+    <!-- State 3: Error during verification -->
+    <div id="state-error" class="hidden">
+      <span class="verify-icon">❌</span>
+      <h1 class="auth-title">Verification failed</h1>
+      <p class="auth-subtitle" id="errorMessage">
+        The verification link may have expired.
+      </p>
+      <a href="/register.html" class="btn btn-outline btn-full" style="margin-top: 16px;">
+        Try registering again
+      </a>
+    </div>
+
+    <div class="auth-footer" style="margin-top: 24px;">
+      <a href="/login.html">← Back to sign in</a>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { supabase }          from './js/supabase-client.js';
+    import { showAlert }         from './js/utils.js';
+
+    // Show user's email in the pending state
+    const params = new URLSearchParams(window.location.search);
+    const email  = params.get('email');
+    if (email) {
+      document.getElementById('emailDisplay').textContent = email;
+    }
+
+    // Check if the user just clicked a verification link
+    // Supabase puts #access_token=... or ?type=signup in the URL
+    const hash   = window.location.hash;
+    const search = window.location.search;
+
+    // Handle email confirmation redirect from Supabase
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error) {
+      document.getElementById('state-pending').classList.add('hidden');
+      document.getElementById('state-error').classList.remove('hidden');
+      document.getElementById('errorMessage').textContent = error.message;
+    } else if (session && (hash.includes('access_token') || search.includes('type=signup'))) {
+      // User just verified their email and has an active session
+      document.getElementById('state-pending').classList.add('hidden');
+      document.getElementById('state-verified').classList.remove('hidden');
+    }
+    // Otherwise: stay on the "check your email" state
+
+    // Resend verification email
+    document.getElementById('resendBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const emailInput = email || prompt('Enter your email address:');
+      if (!emailInput) return;
+
+      const { error } = await supabase.auth.resend({
+        type:  'signup',
+        email: emailInput
+      });
+
+      if (error) {
+        showAlert('#resendAlert', error.message, 'error');
+      } else {
+        showAlert('#resendAlert', 'Verification email resent! Check your inbox.', 'success');
+      }
+    });
+  </script>
+
+</body>
+</html>

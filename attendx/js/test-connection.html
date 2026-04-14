@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><title>Connection Test</title></head>
+<body>
+  <h2>Supabase Connection Test</h2>
+  <div id="result">Testing...</div>
+
+  <script type="module">
+    import { supabase } from './js/supabase-client.js';
+
+    try {
+      // Try to get the current session (should be null, no one is logged in)
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) throw error;
+
+      document.getElementById('result').innerHTML =
+        '<p style="color:green">✅ Connected to Supabase successfully!</p>' +
+        '<p>Session: ' + (data.session ? 'Active' : 'None (expected — not logged in)') + '</p>';
+
+    } catch (err) {
+      document.getElementById('result').innerHTML =
+        '<p style="color:red">❌ Connection failed: ' + err.message + '</p>';
+    }
+  </script>
+</body>
+</html>

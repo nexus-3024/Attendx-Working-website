@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — AttendX</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+
+    <!-- Logo -->
+    <div class="auth-logo">
+      🏢 <span>Attend<span class="accent">X</span></span>
+    </div>
+    <p class="auth-tagline">Attendance Management System</p>
+
+    <!-- Title -->
+    <h1 class="auth-title">Create your account</h1>
+    <p class="auth-subtitle">Join your organization's attendance system</p>
+
+    <!-- Alert box (hidden by default) -->
+    <div class="alert" id="alert"></div>
+
+    <!-- Registration Form -->
+    <form id="registerForm" novalidate>
+
+      <div class="form-group">
+        <label for="full_name">Full Name *</label>
+        <input
+          type="text"
+          id="full_name"
+          name="full_name"
+          placeholder="Jane Smith"
+          required
+          autocomplete="name"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="email">Work Email *</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="jane@company.com"
+          required
+          autocomplete="email"
+        >
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="department">Department</label>
+          <select id="department" name="department">
+            <option value="General">General</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Sales">Sales</option>
+            <option value="HR">Human Resources</option>
+            <option value="Finance">Finance</option>
+            <option value="Operations">Operations</option>
+            <option value="Design">Design</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            placeholder="+1 234 567 8900"
+          >
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password *</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          placeholder="Minimum 6 characters"
+          required
+          autocomplete="new-password"
+        >
+        <div class="password-strength">
+          <div class="password-strength-bar" id="strengthBar"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password">Confirm Password *</label>
+        <input
+          type="password"
+          id="confirm_password"
+          name="confirm_password"
+          placeholder="Repeat your password"
+          required
+          autocomplete="new-password"
+        >
+      </div>
+
+      <div class="form-group" style="margin-top: 8px;">
+        <button type="submit" class="btn btn-primary btn-full btn-lg">
+          Create Account
+        </button>
+      </div>
+
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login.html">Sign in</a>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { handleRegister } from './js/auth.js';
+
+    // Attach form submit handler
+    document.getElementById('registerForm').addEventListener('submit', handleRegister);
+
+    // Password strength indicator
+    document.getElementById('password').addEventListener('input', function () {
+      const val = this.value;
+      const bar = document.getElementById('strengthBar');
+      let strength = 0;
+      if (val.length >= 6)  strength += 25;
+      if (val.length >= 10) strength += 25;
+      if (/[A-Z]/.test(val) && /[a-z]/.test(val)) strength += 25;
+      if (/[0-9!@#$%^&*]/.test(val)) strength += 25;
+
+      bar.style.width = strength + '%';
+      bar.style.background =
+        strength <= 25 ? '#f87171' :
+        strength <= 50 ? '#fbbf24' :
+        strength <= 75 ? '#4f7ef7' : '#34d399';
+    });
+  </script>
+
+</body>
+</html>

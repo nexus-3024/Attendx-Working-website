@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AttendX</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      display:         flex;
+      align-items:     center;
+      justify-content: center;
+      min-height:      100vh;
+      flex-direction:  column;
+      gap:             12px;
+      color:           var(--text-2);
+    }
+    .logo {
+      font-family: var(--font-display);
+      font-size:   32px;
+      font-weight: 700;
+      color:       var(--text);
+    }
+    .logo span { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <div class="logo">🏢 Attend<span>X</span></div>
+  <p>Checking session…</p>
+  <span class="spinner"></span>
+
+  <script type="module">
+    import { supabase }       from './js/supabase-client.js';
+    import { getUserProfile } from './js/supabase-client.js';
+
+    // Smart redirect:
+    // - Not logged in  → login page
+    // - Employee       → employee dashboard
+    // - Admin          → admin dashboard
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      window.location.href = '/login.html';
+    } else {
+      const profile = await getUserProfile(session.user.id);
+      if (profile?.role === 'admin') {
+        window.location.href = '/dashboard/admin.html';
+      } else {
+        window.location.href = '/dashboard/employee.html';
+      }
+    }
+  </script>
+
+</body>
+</html>
