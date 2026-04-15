@@ -1,8 +1,6 @@
 // js/utils.js — Shared utility functions used across all pages
 
 // ── Loading state helper ──────────────────────────────────────
-// Disables a button and shows a spinner while an async operation runs.
-// Usage: setLoading(btn, true, 'Saving...') / setLoading(btn, false)
 export function setLoading(btn, isLoading, loadingText = 'Loading...') {
   if (isLoading) {
     btn.disabled         = true;
@@ -15,8 +13,6 @@ export function setLoading(btn, isLoading, loadingText = 'Loading...') {
 }
 
 // ── Alert helper ───────────────────────────────────────────────
-// Shows an alert box with a message.
-// type: 'error' | 'success' | 'info' | 'warning'
 export function showAlert(selector, message, type = 'error') {
   const el = typeof selector === 'string'
     ? document.querySelector(selector)
@@ -33,7 +29,6 @@ export function showAlert(selector, message, type = 'error') {
   el.className  = `alert alert-${type} show`;
   el.innerHTML  = `<span>${icons[type] || ''}</span> ${message}`;
 
-  // Auto-hide after 6 seconds
   clearTimeout(el._hideTimer);
   el._hideTimer = setTimeout(() => {
     el.classList.remove('show');
@@ -50,6 +45,10 @@ export function hideAlert(selector) {
 // ── Date / Time formatters ─────────────────────────────────────
 export function formatDate(dateStr) {
   if (!dateStr) return '—';
+  // NOTE: The T00:00:00 suffix is intentional. Without it, JavaScript
+  // parses date-only strings (YYYY-MM-DD) as UTC midnight, which shifts
+  // the display date by one day in timezones behind UTC (e.g. UTC-5).
+  // Appending T00:00:00 forces local-time parsing instead.
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
@@ -58,6 +57,8 @@ export function formatDate(dateStr) {
 
 export function formatDateTime(isoStr) {
   if (!isoStr) return '—';
+  // Full ISO strings (with time) are correctly treated as UTC and
+  // converted to local time by toLocaleString — no suffix needed.
   return new Date(isoStr).toLocaleString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
     hour:  '2-digit', minute: '2-digit'
@@ -72,7 +73,6 @@ export function formatTime(isoStr) {
 }
 
 export function todayISO() {
-  // Returns today's date as YYYY-MM-DD in local time
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -148,4 +148,40 @@ export function exportCSV(filename, rows, headers) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+// ── FIX 10: initMobileSidebar — shared utility ─────────────────
+// Previously copy-pasted identically into employee.html, admin.html,
+// and missing entirely from analytics.html (FIX 2).
+// Call this once at the bottom of any dashboard page's script block.
+export function initMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  if (!sidebar || !menuBtn || !overlay) return;
+
+  function openSidebar() {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('show');
+    menuBtn.textContent = '✕';
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('show');
+    menuBtn.textContent = '☰';
+  }
+
+  menuBtn.addEventListener('click', () => {
+    sidebar.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
+  });
+
+  overlay.addEventListener('click', closeSidebar);
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
 }

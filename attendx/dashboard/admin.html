@@ -97,6 +97,10 @@
   </style>
 </head>
 <body>
+  <!-- Mobile hamburger menu button -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+<!-- Sidebar overlay (tap to close sidebar on mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="app-layout">
 
@@ -126,7 +130,7 @@
       <button class="nav-item" data-section="users">
         <span class="nav-icon">👥</span> User Management
       </button>
-      <a class="nav-item" href="/pages/analytics.html">
+      <a class="nav-item" href="/dashboard/analytics.html">
         <span class="nav-icon">📈</span> Analytics
       </a>
 
@@ -475,14 +479,15 @@
   import { getAllLeaves, approveLeave,
            rejectLeave, getLeaveStats }      from '../js/leave.js';
   import { getAllAttendance, getAllProfiles,
-           getAdminOverview,
+           getAdminOverview, getTodayAttendance,
            getEmployeeMonthlySummaries,
            setUserActive, setUserRole }      from '../js/admin.js';
   import { handleLogout }                    from '../js/auth.js';
   import { formatDate, formatTime, todayISO,
            statusBadge, showAlert, setLoading,
            capitalize, exportCSV,
-           getCurrentMonthYear }             from '../js/utils.js';
+           getCurrentMonthYear,
+           initMobileSidebar }              from '../js/utils.js';
 
   // ── Auth guard (admin only) ───────────────────────────────
   const { user, profile } = await requireAdmin() || {};
@@ -548,10 +553,9 @@
       badge.classList.add('hidden');
     }
 
-    // Today's snapshot table
-    const today   = todayISO();
-    const records = await getAllAttendance({ month: null, year: null });
-    const todayRecords = records.filter(r => r.date === today);
+    // Today's snapshot table — FIX 7: query by today's date directly
+    // in the DB instead of fetching 100 rows and filtering client-side.
+    const todayRecords = await getTodayAttendance();
     const tbody   = document.getElementById('todayBody');
 
     if (!todayRecords.length) {
@@ -990,6 +994,9 @@
       ['Name','Email','Department','Present Days','Late Days','Half Days','Total Hours']
     );
   });
+  // FIX 10: Mobile sidebar is now handled by the shared initMobileSidebar()
+  // utility in utils.js — no more copy-pasted code per page.
+  initMobileSidebar();
 
 </script>
 

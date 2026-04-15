@@ -3,10 +3,19 @@
 import { supabase } from './supabase-client.js';
 
 // ── Employee: get own leave requests ───────────────────────────
-export async function getMyLeaves({ status } = {}) {
+// ── FIX 8: Now requires userId and filters explicitly in the query.
+// Previously relied only on RLS, which silently fails if RLS is
+// disabled or misconfigured during development/testing.
+export async function getMyLeaves(userId, { status } = {}) {
+  if (!userId) {
+    console.error('getMyLeaves: userId is required');
+    return [];
+  }
+
   let query = supabase
     .from('leave_requests')
     .select('*')
+    .eq('user_id', userId)       // explicit filter — don't rely on RLS alone
     .order('created_at', { ascending: false });
 
   if (status) query = query.eq('status', status);
@@ -44,8 +53,8 @@ export async function cancelLeave(leaveId, userId) {
     .from('leave_requests')
     .update({ status: 'cancelled' })
     .eq('id', leaveId)
-    .eq('user_id', userId)   // RLS also enforces this
-    .eq('status', 'pending'); // can only cancel if still pending
+    .eq('user_id', userId)
+    .eq('status', 'pending');
 
   if (error) return { error: error.message };
   return { success: true };

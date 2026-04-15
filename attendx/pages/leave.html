@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leave Requests — AttendX</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <style>
+    /* Leave request form card */
+    .leave-form-card {
+      background:    var(--surface);
+      border:        1px solid var(--accent);
+      border-radius: var(--radius);
+      padding:       24px;
+      margin-bottom: 24px;
+    }
+
+    /* Leave type pill selector */
+    .leave-type-grid {
+      display:               grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap:                   10px;
+      margin-bottom:         4px;
+    }
+
+    .leave-type-pill {
+      padding:       10px 8px;
+      border-radius: var(--radius-sm);
+      border:        2px solid var(--border);
+      background:    var(--surface2);
+      cursor:        pointer;
+      text-align:    center;
+      font-size:     13px;
+      font-weight:   500;
+      color:         var(--text-2);
+      transition:    all 0.15s;
+      display:       flex;
+      flex-direction: column;
+      align-items:   center;
+      gap:           4px;
+    }
+    .leave-type-pill:hover {
+      border-color: var(--accent);
+      color:        var(--accent);
+    }
+    .leave-type-pill.selected {
+      border-color: var(--accent);
+      background:   var(--accent-dim);
+      color:        var(--accent);
+    }
+    .leave-type-pill .pill-icon { font-size: 20px; }
+
+    /* Days counter badge */
+    .days-counter {
+      display:         inline-flex;
+      align-items:     center;
+      gap:             8px;
+      background:      var(--accent-dim);
+      border:          1px solid var(--accent);
+      border-radius:   var(--radius-sm);
+      padding:         10px 16px;
+      font-size:       14px;
+      color:           var(--accent);
+      margin-top:      4px;
+    }
+    .days-counter .days-num {
+      font-family:  var(--font-display);
+      font-size:    24px;
+      font-weight:  700;
+    }
+
+    /* Leave request card in list */
+    .leave-card {
+      background:    var(--surface2);
+      border:        1px solid var(--border);
+      border-radius: var(--radius);
+      padding:       18px 20px;
+      margin-bottom: 12px;
+      display:       grid;
+      grid-template-columns: 1fr auto;
+      gap:           12px;
+      align-items:   start;
+    }
+    .leave-card:last-child { margin-bottom: 0; }
+
+    .leave-card-header {
+      display:     flex;
+      align-items: center;
+      gap:         10px;
+      margin-bottom: 8px;
+    }
+
+    .leave-type-tag {
+      font-family:   var(--font-display);
+      font-size:     13px;
+      font-weight:   600;
+      color:         var(--text);
+      text-transform: capitalize;
+    }
+
+    .leave-card-meta {
+      font-size: 13px;
+      color:     var(--text-2);
+      display:   flex;
+      gap:       16px;
+      flex-wrap: wrap;
+    }
+
+    .leave-card-reason {
+      margin-top: 8px;
+      font-size:  13px;
+      color:      var(--text-2);
+      line-height: 1.5;
+    }
+
+    .leave-card-comment {
+      margin-top:    8px;
+      padding:       10px 12px;
+      background:    var(--surface);
+      border-radius: var(--radius-sm);
+      border-left:   3px solid var(--accent);
+      font-size:     13px;
+      color:         var(--text-2);
+    }
+
+    /* Stats bar */
+    .leave-stats {
+      display:               grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap:                   12px;
+      margin-bottom:         24px;
+    }
+
+    .leave-stat {
+      background:    var(--surface);
+      border:        1px solid var(--border);
+      border-radius: var(--radius);
+      padding:       16px;
+      text-align:    center;
+    }
+
+    .leave-stat-val {
+      font-family: var(--font-display);
+      font-size:   28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .leave-stat-label {
+      font-size:  12px;
+      color:      var(--text-3);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Mobile UI -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-layout">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">🏢 Attend<span class="accent">X</span></div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Navigation</div>
+      <a class="nav-item" href="/dashboard/employee.html">
+        <span class="nav-icon">🏠</span> Dashboard
+      </a>
+      <a class="nav-item" href="/pages/attendance.html">
+        <span class="nav-icon">📋</span> Attendance History
+      </a>
+      <a class="nav-item active">
+        <span class="nav-icon">🏖️</span> Leave Requests
+      </a>
+      <div class="nav-section">Account</div>
+      <button class="nav-item" id="logoutBtn">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="avatarEl">?</div>
+      <div>
+        <div class="user-info-name" id="userNameEl">Loading…</div>
+        <div class="user-info-role">Employee</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Leave Requests</h1>
+        <p class="page-subtitle">Submit and track your leave applications</p>
+      </div>
+      <button class="btn btn-primary" id="newRequestBtn">+ New Request</button>
+    </div>
+
+    <!-- ── Leave Stats ────────────────────────────────────────── -->
+    <div class="leave-stats" id="leaveStats">
+      <div class="leave-stat">
+        <div class="leave-stat-val" id="statPending" style="color:var(--warning)">—</div>
+        <div class="leave-stat-label">Pending</div>
+      </div>
+      <div class="leave-stat">
+        <div class="leave-stat-val" id="statApproved" style="color:var(--success)">—</div>
+        <div class="leave-stat-label">Approved</div>
+      </div>
+      <div class="leave-stat">
+        <div class="leave-stat-val" id="statRejected" style="color:var(--danger)">—</div>
+        <div class="leave-stat-label">Rejected</div>
+      </div>
+      <div class="leave-stat">
+        <div class="leave-stat-val" id="statTotal" style="color:var(--accent)">—</div>
+        <div class="leave-stat-label">Total Requests</div>
+      </div>
+    </div>
+
+    <!-- ── New Leave Request Form (hidden by default) ────────── -->
+    <div class="leave-form-card hidden" id="leaveFormCard">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h2 style="font-size:17px;font-weight:600">New Leave Request</h2>
+        <button class="btn btn-ghost btn-sm" id="cancelFormBtn">✕ Cancel</button>
+      </div>
+
+      <div class="alert" id="formAlert"></div>
+
+      <form id="leaveForm" novalidate>
+
+        <!-- Leave Type Selector -->
+        <div class="form-group">
+          <label>Leave Type *</label>
+          <div class="leave-type-grid">
+            <div class="leave-type-pill selected" data-value="sick">
+              <span class="pill-icon">🤒</span>
+              Sick
+            </div>
+            <div class="leave-type-pill" data-value="casual">
+              <span class="pill-icon">🌴</span>
+              Casual
+            </div>
+            <div class="leave-type-pill" data-value="annual">
+              <span class="pill-icon">📅</span>
+              Annual
+            </div>
+            <div class="leave-type-pill" data-value="emergency">
+              <span class="pill-icon">🚨</span>
+              Emergency
+            </div>
+            <div class="leave-type-pill" data-value="unpaid">
+              <span class="pill-icon">💸</span>
+              Unpaid
+            </div>
+            <div class="leave-type-pill" data-value="other">
+              <span class="pill-icon">📝</span>
+              Other
+            </div>
+          </div>
+          <input type="hidden" id="selectedLeaveType" value="sick">
+        </div>
+
+        <!-- Date Range -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input type="date" id="startDate" name="start_date" required>
+          </div>
+          <div class="form-group">
+            <label>End Date *</label>
+            <input type="date" id="endDate" name="end_date" required>
+          </div>
+        </div>
+
+        <!-- Days counter (auto-calculated) -->
+        <div id="daysDisplay" class="hidden" style="margin-bottom:16px">
+          <div class="days-counter">
+            <span class="days-num" id="daysNum">0</span>
+            <span>calendar day(s) requested</span>
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="form-group">
+          <label>Reason *</label>
+          <textarea
+            id="leaveReason"
+            name="reason"
+            placeholder="Please explain your reason for leave…"
+            rows="4"
+            required
+          ></textarea>
+          <div style="font-size:12px;color:var(--text-3);margin-top:4px">
+            <span id="charCount">0</span> / 500 characters
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            Submit Request
+          </button>
+          <button type="button" class="btn btn-outline" id="cancelFormBtn2">
+            Cancel
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Leave Requests List ───────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">
+        Your Requests
+        <!-- Filter tabs -->
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-primary filter-tab" data-filter="all">All</button>
+          <button class="btn btn-sm btn-outline filter-tab" data-filter="pending">Pending</button>
+          <button class="btn btn-sm btn-outline filter-tab" data-filter="approved">Approved</button>
+          <button class="btn btn-sm btn-outline filter-tab" data-filter="rejected">Rejected</button>
+        </div>
+      </div>
+
+      <div id="leaveList">
+        <div class="text-muted text-center" style="padding:40px">Loading…</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module">
+  import { waitForSession, getUserProfile, supabase } from '../js/supabase-client.js';
+  import { handleLogout }                             from '../js/auth.js';
+  import { setLoading, showAlert, formatDate,
+           statusBadge, daysBetween, todayISO,
+           capitalize }                               from '../js/utils.js';
+
+  // ── Auth guard ────────────────────────────────────────────
+  const session = await waitForSession();
+  if (!session) { window.location.href = '/login.html'; throw new Error(); }
+  const user    = session.user;
+  const profile = await getUserProfile(user.id);
+  if (!profile)  { window.location.href = '/login.html'; throw new Error(); }
+
+  // ── Sidebar user ──────────────────────────────────────────
+  const initials = (profile.full_name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatarEl').textContent   = initials;
+  document.getElementById('userNameEl').textContent = profile.full_name || user.email;
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  // ── Set min dates ─────────────────────────────────────────
+  const today = todayISO();
+  document.getElementById('startDate').min = today;
+  document.getElementById('endDate').min   = today;
+
+  // ── Leave type pill selector ──────────────────────────────
+  document.querySelectorAll('.leave-type-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.leave-type-pill').forEach(p => p.classList.remove('selected'));
+      pill.classList.add('selected');
+      document.getElementById('selectedLeaveType').value = pill.dataset.value;
+    });
+  });
+
+  // ── Date change → update days counter ────────────────────
+  function recalcDays() {
+    const s   = document.getElementById('startDate').value;
+    const e   = document.getElementById('endDate').value;
+    const div = document.getElementById('daysDisplay');
+    if (s && e && e >= s) {
+      const days = daysBetween(s, e);
+      document.getElementById('daysNum').textContent = days;
+      div.classList.remove('hidden');
+      // Sync end date minimum
+      document.getElementById('endDate').min = s;
+    } else if (s) {
+      document.getElementById('endDate').min = s;
+      div.classList.add('hidden');
+    } else {
+      div.classList.add('hidden');
+    }
+  }
+  document.getElementById('startDate').addEventListener('change', recalcDays);
+  document.getElementById('endDate').addEventListener('change', recalcDays);
+
+  // ── Character counter for reason ──────────────────────────
+  document.getElementById('leaveReason').addEventListener('input', function() {
+    const len = this.value.length;
+    document.getElementById('charCount').textContent = len;
+    if (len > 500) this.value = this.value.slice(0, 500);
+  });
+
+  // ── Show / hide form ──────────────────────────────────────
+  function showForm() {
+    document.getElementById('leaveFormCard').classList.remove('hidden');
+    document.getElementById('newRequestBtn').classList.add('hidden');
+    document.getElementById('leaveForm').reset();
+    document.getElementById('daysDisplay').classList.add('hidden');
+    document.getElementById('charCount').textContent = '0';
+    // Reset pill selection
+    document.querySelectorAll('.leave-type-pill').forEach(p => p.classList.remove('selected'));
+    document.querySelector('[data-value="sick"]').classList.add('selected');
+    document.getElementById('selectedLeaveType').value = 'sick';
+    document.getElementById('formAlert').className = 'alert';
+  }
+
+  function hideForm() {
+    document.getElementById('leaveFormCard').classList.add('hidden');
+    document.getElementById('newRequestBtn').classList.remove('hidden');
+  }
+
+  document.getElementById('newRequestBtn').addEventListener('click', showForm);
+  document.getElementById('cancelFormBtn').addEventListener('click', hideForm);
+  document.getElementById('cancelFormBtn2').addEventListener('click', hideForm);
+
+  // ── Submit form ───────────────────────────────────────────
+  document.getElementById('leaveForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn       = document.getElementById('submitBtn');
+    const alertEl   = document.getElementById('formAlert');
+    const leaveType = document.getElementById('selectedLeaveType').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate   = document.getElementById('endDate').value;
+    const reason    = document.getElementById('leaveReason').value.trim();
+
+    if (!startDate || !endDate) {
+      return showAlert(alertEl, 'Please select start and end dates.', 'error');
+    }
+    if (endDate < startDate) {
+      return showAlert(alertEl, 'End date must be on or after start date.', 'error');
+    }
+    if (!reason) {
+      return showAlert(alertEl, 'Please provide a reason for your leave.', 'error');
+    }
+
+    setLoading(btn, true, 'Submitting…');
+
+    const { error } = await supabase.from('leave_requests').insert({
+      user_id:    user.id,
+      leave_type: leaveType,
+      start_date: startDate,
+      end_date:   endDate,
+      total_days: daysBetween(startDate, endDate),
+      reason,
+      status:     'pending'
+    });
+
+    setLoading(btn, false);
+
+    if (error) {
+      return showAlert(alertEl, error.message, 'error');
+    }
+
+    showAlert(alertEl, 'Leave request submitted successfully! Your manager will review it.', 'success');
+    setTimeout(() => {
+      hideForm();
+      loadLeaves('all');
+      loadStats();
+    }, 1500);
+  });
+
+  // ── Filter tabs ───────────────────────────────────────────
+  let currentFilter = 'all';
+
+  document.querySelectorAll('.filter-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab').forEach(b => {
+        b.className = 'btn btn-sm btn-outline filter-tab';
+      });
+      btn.className = 'btn btn-sm btn-primary filter-tab';
+      currentFilter = btn.dataset.filter;
+      loadLeaves(currentFilter);
+    });
+  });
+
+  // ── Load leave requests ───────────────────────────────────
+  async function loadLeaves(filter = 'all') {
+    const container = document.getElementById('leaveList');
+    container.innerHTML = '<div class="text-muted text-center" style="padding:40px">Loading…</div>';
+
+    let query = supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (filter !== 'all') query = query.eq('status', filter);
+
+    const { data: leaves, error } = await query;
+
+    if (error) {
+      container.innerHTML = `<div class="alert alert-error show">Failed to load requests: ${error.message}</div>`;
+      return;
+    }
+
+    if (!leaves || leaves.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🏖️</div>
+          <h3>No ${filter === 'all' ? '' : filter + ' '}requests</h3>
+          <p>${filter === 'all' ? 'Click "New Request" to submit your first leave application' : 'No requests with this status'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    const LEAVE_ICONS = {
+      sick:      '🤒', casual: '🌴', annual: '📅',
+      emergency: '🚨', unpaid: '💸', other:  '📝'
+    };
+
+    container.innerHTML = leaves.map(l => `
+      <div class="leave-card">
+        <div>
+          <div class="leave-card-header">
+            <span style="font-size:20px">${LEAVE_ICONS[l.leave_type] || '📝'}</span>
+            <span class="leave-type-tag">${capitalize(l.leave_type)} Leave</span>
+            ${statusBadge(l.status)}
+          </div>
+
+          <div class="leave-card-meta">
+            <span>📅 ${formatDate(l.start_date)} → ${formatDate(l.end_date)}</span>
+            <span>⏱ ${l.total_days} day${l.total_days > 1 ? 's' : ''}</span>
+            <span style="color:var(--text-3)">Submitted ${new Date(l.created_at).toLocaleDateString()}</span>
+          </div>
+
+          <div class="leave-card-reason">${l.reason}</div>
+
+          ${l.admin_comment ? `
+            <div class="leave-card-comment">
+              <strong>Admin Response:</strong> ${l.admin_comment}
+              ${l.reviewed_at ? `<div style="font-size:11px;color:var(--text-3);margin-top:4px">
+                Reviewed ${new Date(l.reviewed_at).toLocaleDateString()}
+              </div>` : ''}
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          ${l.status === 'pending' ? `
+            <button
+              class="btn btn-outline btn-sm cancel-btn"
+              data-id="${l.id}"
+              style="white-space:nowrap;color:var(--danger);border-color:var(--danger)">
+              Cancel
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    // Cancel button handlers
+    container.querySelectorAll('.cancel-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to cancel this leave request?')) return;
+        setLoading(btn, true, 'Cancelling…');
+        const { error } = await supabase
+          .from('leave_requests')
+          .update({ status: 'cancelled' })
+          .eq('id', btn.dataset.id)
+          .eq('user_id', user.id)
+          .eq('status', 'pending');
+        if (error) {
+          setLoading(btn, false);
+          alert(error.message);
+        } else {
+          loadLeaves(currentFilter);
+          loadStats();
+        }
+      });
+    });
+  }
+
+  // ── Load stats ────────────────────────────────────────────
+  async function loadStats() {
+    const { data } = await supabase
+      .from('leave_requests')
+      .select('status')
+      .eq('user_id', user.id);
+
+    if (!data) return;
+    const pending  = data.filter(r => r.status === 'pending').length;
+    const approved = data.filter(r => r.status === 'approved').length;
+    const rejected = data.filter(r => r.status === 'rejected').length;
+
+    document.getElementById('statPending').textContent  = pending;
+    document.getElementById('statApproved').textContent = approved;
+    document.getElementById('statRejected').textContent = rejected;
+    document.getElementById('statTotal').textContent    = data.length;
+  }
+
+  // ── Mobile sidebar ────────────────────────────────────────
+  const sidebar = document.querySelector('.sidebar');
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  menuBtn.addEventListener('click', () => {
+    const open = sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('show', open);
+    menuBtn.textContent = open ? '✕' : '☰';
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('show');
+    menuBtn.textContent = '☰';
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+  loadLeaves('all');
+  loadStats();
+
+</script>
+
+</body>
+</html>

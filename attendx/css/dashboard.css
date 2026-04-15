@@ -263,3 +263,142 @@
   .live-time     { font-size: 36px; }
   .stats-grid    { grid-template-columns: 1fr 1fr; }
 }
+/* ══════════════════════════════════════════
+   MOBILE FIXES
+   ══════════════════════════════════════════ */
+
+/* Fix 1: Mobile sidebar overlay */
+.sidebar-overlay {
+  display:    none;
+  position:   fixed;
+  inset:      0;
+  background: rgba(0,0,0,0.5);
+  z-index:    99;
+}
+.sidebar-overlay.show { display: block; }
+
+/* Fix 2: Mobile menu toggle button */
+.mobile-menu-btn {
+  display:         none;
+  position:        fixed;
+  top:             16px;
+  left:            16px;
+  z-index:         101;
+  background:      var(--surface);
+  border:          1px solid var(--border);
+  border-radius:   var(--radius-sm);
+  padding:         8px 10px;
+  cursor:          pointer;
+  font-size:       18px;
+  color:           var(--text);
+  line-height:     1;
+}
+
+@media (max-width: 768px) {
+  /* Show hamburger button */
+  .mobile-menu-btn { display: block; }
+
+  /* Sidebar slides in over content */
+  .sidebar {
+    transform:  translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index:    100;
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Main content takes full width */
+  .main-content {
+    margin-left: 0 !important;
+    padding:     16px !important;
+    padding-top: 60px !important; /* space for hamburger btn */
+  }
+
+  /* Clock widget stacks vertically */
+  .clock-widget {
+    flex-direction: column;
+    text-align:     center;
+    gap:            20px;
+    padding:        20px;
+  }
+
+  /* Smaller live time on mobile */
+  .live-time { font-size: 36px !important; }
+
+  /* Clock actions full width */
+  .clock-actions { min-width: unset; width: 100%; }
+  .clock-times   { grid-template-columns: 1fr 1fr; }
+
+  /* Stats grid: 2 columns on mobile */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Smaller stat values on small screens */
+  .stat-value { font-size: 22px !important; }
+  .stat-card  { padding: 14px; }
+  .stat-icon  { width: 38px; height: 38px; font-size: 18px; }
+
+  /* Tables scroll horizontally */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Filter bar wraps */
+  .filter-bar { flex-wrap: wrap; }
+  .filter-bar select,
+  .filter-bar input { min-width: 120px; flex: 1; }
+
+  /* Modal takes full screen on mobile */
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+    margin:     0;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .modal-overlay {
+    align-items: flex-end; /* modal slides up from bottom */
+  }
+
+  /* Form rows become single column */
+  .form-row { grid-template-columns: 1fr !important; }
+
+  /* Topbar stacks on mobile */
+  .topbar {
+    flex-direction: column;
+    align-items:    flex-start;
+    gap:            12px;
+  }
+
+  /* Page title smaller */
+  .page-title { font-size: 20px !important; }
+
+  /* Nav items slightly larger touch targets */
+  .nav-item { padding: 13px 12px; }
+}
+
+@media (max-width: 400px) {
+  /* Very small phones */
+  .stats-grid { grid-template-columns: 1fr; }
+  .clock-times { grid-template-columns: 1fr 1fr; }
+  .auth-card { padding: 24px 16px; }
+}
+
+/* Fix 3: iOS Safari viewport height bug */
+/* 100vh is wrong on iOS Safari because of the address bar */
+@supports (-webkit-touch-callout: none) {
+  .app-layout { min-height: -webkit-fill-available; }
+  .sidebar    { height:     -webkit-fill-available; }
+}
+
+/* Fix 4: Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Fix 5: Smooth scrolling for iOS */
+.main-content,
+.sidebar {
+  -webkit-overflow-scrolling: touch;
+}

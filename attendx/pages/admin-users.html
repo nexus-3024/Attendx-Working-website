@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management — AttendX</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <style>
+    /* User profile card layout */
+    .user-grid {
+      display:               grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap:                   16px;
+    }
+
+    .user-card {
+      background:    var(--surface);
+      border:        1px solid var(--border);
+      border-radius: var(--radius);
+      padding:       20px;
+      transition:    border-color 0.2s;
+    }
+    .user-card:hover { border-color: var(--border2); }
+    .user-card.inactive { opacity: 0.6; }
+
+    .user-card-header {
+      display:       flex;
+      align-items:   flex-start;
+      gap:           14px;
+      margin-bottom: 14px;
+    }
+
+    .user-big-avatar {
+      width:           52px;
+      height:          52px;
+      border-radius:   50%;
+      background:      linear-gradient(135deg, var(--accent), #7c5df9);
+      display:         flex;
+      align-items:     center;
+      justify-content: center;
+      font-weight:     700;
+      font-size:       18px;
+      color:           white;
+      flex-shrink:     0;
+    }
+
+    .user-card-name {
+      font-weight:   600;
+      font-size:     15px;
+      color:         var(--text);
+      margin-bottom: 2px;
+    }
+    .user-card-email {
+      font-size: 13px;
+      color:     var(--text-3);
+    }
+    .user-card-dept {
+      font-size:  12px;
+      color:      var(--text-3);
+      margin-top: 2px;
+    }
+
+    .user-card-meta {
+      display:               grid;
+      grid-template-columns: 1fr 1fr;
+      gap:                   10px;
+      margin-bottom:         16px;
+      font-size:             13px;
+    }
+
+    .user-meta-item .label {
+      font-size:  11px;
+      color:      var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+    .user-meta-item .value {
+      color: var(--text-2);
+      font-weight: 500;
+    }
+
+    .user-card-actions {
+      display:       flex;
+      gap:           8px;
+      flex-wrap:     wrap;
+      padding-top:   14px;
+      border-top:    1px solid var(--border);
+    }
+
+    /* Edit profile modal */
+    .modal-overlay {
+      display:         none;
+      position:        fixed;
+      inset:           0;
+      background:      rgba(0,0,0,0.7);
+      z-index:         200;
+      align-items:     center;
+      justify-content: center;
+      padding:         20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background:    var(--surface);
+      border:        1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding:       28px;
+      width:         100%;
+      max-width:     460px;
+      max-height:    90vh;
+      overflow-y:    auto;
+    }
+
+    .modal-header {
+      display:       flex;
+      align-items:   center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size:   18px;
+      font-weight: 600;
+    }
+
+    /* Search highlight */
+    mark {
+      background: rgba(79,126,247,0.25);
+      color:      var(--text);
+      border-radius: 2px;
+      padding:    0 2px;
+    }
+
+    /* Summary row at top */
+    .user-summary-bar {
+      display:               grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap:                   12px;
+      margin-bottom:         24px;
+    }
+
+    .summary-pill {
+      background:    var(--surface);
+      border:        1px solid var(--border);
+      border-radius: var(--radius);
+      padding:       14px 16px;
+      display:       flex;
+      align-items:   center;
+      gap:           12px;
+    }
+
+    .summary-pill .num {
+      font-family: var(--font-display);
+      font-size:   26px;
+      font-weight: 700;
+    }
+
+    .summary-pill .lbl {
+      font-size: 12px;
+      color:     var(--text-3);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Mobile UI -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-layout">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      🏢 Attend<span class="accent">X</span>
+      <span style="font-size:11px;background:rgba(251,191,36,0.15);color:var(--warning);
+        padding:2px 8px;border-radius:10px;margin-left:4px">Admin</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Management</div>
+      <a class="nav-item" href="/dashboard/admin.html">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a class="nav-item" href="/pages/analytics.html">
+        <span class="nav-icon">📈</span> Analytics
+      </a>
+      <a class="nav-item active">
+        <span class="nav-icon">👥</span> User Management
+      </a>
+      <div class="nav-section">Account</div>
+      <button class="nav-item" id="logoutBtn">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="avatarEl">A</div>
+      <div>
+        <div class="user-info-name" id="userNameEl">Admin</div>
+        <div class="user-info-role" style="color:var(--warning)">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">User Management</h1>
+        <p class="page-subtitle">Manage employee accounts, roles, and status</p>
+      </div>
+      <button class="btn btn-outline btn-sm" id="refreshBtn">↻ Refresh</button>
+    </div>
+
+    <!-- ── Summary Pills ─────────────────────────────────────── -->
+    <div class="user-summary-bar" id="summaryBar">
+      <div class="summary-pill">
+        <div>
+          <div class="num" id="sumTotal" style="color:var(--accent)">—</div>
+          <div class="lbl">Total Users</div>
+        </div>
+      </div>
+      <div class="summary-pill">
+        <div>
+          <div class="num" id="sumActive" style="color:var(--success)">—</div>
+          <div class="lbl">Active</div>
+        </div>
+      </div>
+      <div class="summary-pill">
+        <div>
+          <div class="num" id="sumInactive" style="color:var(--danger)">—</div>
+          <div class="lbl">Inactive</div>
+        </div>
+      </div>
+      <div class="summary-pill">
+        <div>
+          <div class="num" id="sumAdmins" style="color:var(--warning)">—</div>
+          <div class="lbl">Admins</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Filters ────────────────────────────────────────────── -->
+    <div class="card" style="margin-bottom:20px;padding:16px 20px">
+      <div class="filter-bar" style="margin-bottom:0">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search by name or email…"
+          style="flex:1;min-width:180px"
+        >
+        <select id="filterRole">
+          <option value="">All Roles</option>
+          <option value="employee">Employees</option>
+          <option value="admin">Admins</option>
+        </select>
+        <select id="filterActive">
+          <option value="">All Status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+        <select id="filterDept">
+          <option value="">All Departments</option>
+        </select>
+        <button class="btn btn-outline btn-sm" id="clearFiltersBtn">Clear</button>
+      </div>
+    </div>
+
+    <!-- ── User Cards Grid ───────────────────────────────────── -->
+    <div id="userGrid" class="user-grid">
+      <div class="text-muted text-center" style="padding:60px;grid-column:1/-1">
+        Loading users…
+      </div>
+    </div>
+
+    <div id="noResults" class="hidden">
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <h3>No users found</h3>
+        <p>Try adjusting your search or filters</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ EDIT USER MODAL ═══════════════════════════════════════ -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit User</div>
+      <button class="btn btn-ghost btn-sm" id="closeEditModal">✕</button>
+    </div>
+
+    <div class="alert" id="editAlert"></div>
+
+    <form id="editForm" novalidate>
+      <input type="hidden" id="editUserId">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" id="editFirstName" placeholder="First name">
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" id="editLastName" placeholder="Last name">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="editFullName" placeholder="Full name" required>
+      </div>
+
+      <div class="form-group">
+        <label>Department</label>
+        <select id="editDept">
+          <option value="General">General</option>
+          <option value="Engineering">Engineering</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Sales">Sales</option>
+          <option value="HR">Human Resources</option>
+          <option value="Finance">Finance</option>
+          <option value="Operations">Operations</option>
+          <option value="Design">Design</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel" id="editPhone" placeholder="+1 234 567 8900">
+      </div>
+
+      <div class="form-group">
+        <label>Role</label>
+        <select id="editRole">
+          <option value="employee">Employee</option>
+          <option value="admin">Admin</option>
+        </select>
+        <div style="font-size:12px;color:var(--text-3);margin-top:4px">
+          ⚠️ Admins have full access to all features and data
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full" id="saveEditBtn">
+        Save Changes
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ══ CONFIRM DELETE MODAL ════════════════════════════════════ -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <div style="font-size:52px;margin-bottom:12px">⚠️</div>
+    <div class="modal-title" style="margin-bottom:10px;text-align:center">Delete User?</div>
+    <p class="text-muted" id="deleteModalText" style="margin-bottom:24px;font-size:14px;line-height:1.6"></p>
+    <div class="alert alert-error show" style="text-align:left;margin-bottom:16px">
+      This will permanently delete the user and ALL their attendance records and leave requests.
+      This action <strong>cannot be undone</strong>.
+    </div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-outline btn-full" id="cancelDeleteBtn">Cancel</button>
+      <button class="btn btn-danger btn-full" id="confirmDeleteBtn">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { waitForSession, getUserProfile, supabase } from '../js/supabase-client.js';
+  import { getAllProfiles, setUserActive, setUserRole } from '../js/admin.js';
+  import { handleLogout }                              from '../js/auth.js';
+  import { setLoading, showAlert, formatDate,
+           statusBadge, debounce }                     from '../js/utils.js';
+
+  // ── Auth guard ────────────────────────────────────────────
+  const session = await waitForSession();
+  if (!session) { window.location.href = '/login.html'; throw new Error(); }
+  const adminUser    = session.user;
+  const adminProfile = await getUserProfile(adminUser.id);
+  if (!adminProfile || adminProfile.role !== 'admin') {
+    window.location.href = '/dashboard/employee.html';
+    throw new Error();
+  }
+
+  // ── Sidebar ───────────────────────────────────────────────
+  const aInitials = (adminProfile.full_name||'A').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatarEl').textContent   = aInitials;
+  document.getElementById('userNameEl').textContent = adminProfile.full_name;
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  // ── State ─────────────────────────────────────────────────
+  let allUsers      = [];
+  let filteredUsers = [];
+
+  // ── Load all users ────────────────────────────────────────
+  async function loadUsers() {
+    const grid = document.getElementById('userGrid');
+    grid.innerHTML = '<div class="text-muted text-center" style="padding:60px;grid-column:1/-1">Loading…</div>';
+
+    allUsers = await getAllProfiles({ includeAdmins: true });
+
+    // Populate department filter
+    const depts = [...new Set(allUsers.map(u => u.department).filter(Boolean))].sort();
+    const deptSel = document.getElementById('filterDept');
+    const curDept = deptSel.value;
+    deptSel.innerHTML = '<option value="">All Departments</option>';
+    depts.forEach(d => {
+      deptSel.innerHTML += `<option value="${d}" ${d === curDept ? 'selected' : ''}>${d}</option>`;
+    });
+
+    updateSummary();
+    applyFilters();
+  }
+
+  // ── Update summary pills ──────────────────────────────────
+  function updateSummary() {
+    document.getElementById('sumTotal').textContent    = allUsers.length;
+    document.getElementById('sumActive').textContent   = allUsers.filter(u => u.is_active).length;
+    document.getElementById('sumInactive').textContent = allUsers.filter(u => !u.is_active).length;
+    document.getElementById('sumAdmins').textContent   = allUsers.filter(u => u.role === 'admin').length;
+  }
+
+  // ── Apply filters + search ────────────────────────────────
+  function applyFilters() {
+    const search   = document.getElementById('searchInput').value.toLowerCase().trim();
+    const role     = document.getElementById('filterRole').value;
+    const isActive = document.getElementById('filterActive').value;
+    const dept     = document.getElementById('filterDept').value;
+
+    filteredUsers = allUsers.filter(u => {
+      if (role     && u.role                    !== role)            return false;
+      if (isActive && String(u.is_active)       !== isActive)        return false;
+      if (dept     && u.department              !== dept)            return false;
+      if (search) {
+        const name  = (u.full_name || '').toLowerCase();
+        const email = (u.email     || '').toLowerCase();
+        if (!name.includes(search) && !email.includes(search))       return false;
+      }
+      return true;
+    });
+
+    renderGrid(filteredUsers, search);
+  }
+
+  // ── Render user cards grid ────────────────────────────────
+  function renderGrid(users, highlight = '') {
+    const grid      = document.getElementById('userGrid');
+    const noResults = document.getElementById('noResults');
+
+    if (!users.length) {
+      grid.innerHTML = '';
+      noResults.classList.remove('hidden');
+      return;
+    }
+
+    noResults.classList.add('hidden');
+
+    function hl(text) {
+      if (!highlight || !text) return text || '';
+      const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>');
+    }
+
+    grid.innerHTML = users.map(u => {
+      const initials   = (u.full_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      const isYou      = u.id === adminUser.id;
+      const isVerified = u.is_verified !== false; // profiles don't store this, assume true
+
+      return `
+        <div class="user-card ${!u.is_active ? 'inactive' : ''}" id="card-${u.id}">
+
+          <div class="user-card-header">
+            <div class="user-big-avatar" style="${!u.is_active ? 'opacity:0.5' : ''}">${initials}</div>
+            <div style="flex:1;min-width:0">
+              <div class="user-card-name">
+                ${hl(u.full_name)}
+                ${isYou ? '<span style="font-size:11px;color:var(--text-3);font-weight:400"> (you)</span>' : ''}
+              </div>
+              <div class="user-card-email">${hl(u.email)}</div>
+              <div class="user-card-dept">🏢 ${u.department || 'No department'}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              ${statusBadge(u.role === 'admin' ? 'active' : 'inactive')
+                .replace('Active', 'Admin').replace('Inactive', 'Employee')}
+              ${statusBadge(u.is_active ? 'active' : 'inactive')}
+            </div>
+          </div>
+
+          <div class="user-card-meta">
+            <div class="user-meta-item">
+              <div class="label">Phone</div>
+              <div class="value">${u.phone || '—'}</div>
+            </div>
+            <div class="user-meta-item">
+              <div class="label">Joined</div>
+              <div class="value">${formatDate(u.created_at)}</div>
+            </div>
+          </div>
+
+          ${!isYou ? `
+            <div class="user-card-actions">
+              <button class="btn btn-outline btn-sm edit-btn"
+                data-id="${u.id}"
+                style="flex:1">
+                ✏️ Edit
+              </button>
+              <button class="btn btn-sm ${u.is_active ? 'btn-outline' : 'btn-success'} toggle-btn"
+                data-id="${u.id}"
+                data-active="${u.is_active}"
+                style="flex:1">
+                ${u.is_active ? '🔒 Deactivate' : '✅ Activate'}
+              </button>
+              <button class="btn btn-danger btn-sm delete-btn"
+                data-id="${u.id}"
+                data-name="${(u.full_name || 'this user').replace(/"/g, '&quot;')}">
+                🗑
+              </button>
+            </div>
+          ` : `
+            <div style="padding-top:14px;border-top:1px solid var(--border);
+              font-size:12px;color:var(--text-3);text-align:center">
+              This is your account
+            </div>
+          `}
+        </div>
+      `;
+    }).join('');
+
+    // ── Attach button handlers ────────────────────────────
+    grid.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+    });
+
+    grid.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleActive(btn.dataset.id, btn.dataset.active === 'true'));
+    });
+
+    grid.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.name));
+    });
+  }
+
+  // ── Toggle active status ──────────────────────────────────
+  async function toggleActive(userId, isActive) {
+    const action = isActive ? 'deactivate' : 'activate';
+    const u      = allUsers.find(u => u.id === userId);
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${u?.full_name || 'this user'}?`)) return;
+
+    const { error } = await setUserActive(userId, !isActive);
+    if (error) { alert(error); return; }
+
+    // Update local state without full reload
+    const idx = allUsers.findIndex(u => u.id === userId);
+    if (idx >= 0) allUsers[idx].is_active = !isActive;
+    updateSummary();
+    applyFilters();
+  }
+
+  // ── Edit user modal ───────────────────────────────────────
+  function openEditModal(userId) {
+    const u = allUsers.find(u => u.id === userId);
+    if (!u) return;
+
+    document.getElementById('editUserId').value   = u.id;
+    document.getElementById('editFullName').value  = u.full_name || '';
+    document.getElementById('editDept').value      = u.department || 'General';
+    document.getElementById('editPhone').value     = u.phone || '';
+    document.getElementById('editRole').value      = u.role || 'employee';
+    document.getElementById('editAlert').className = 'alert';
+
+    document.getElementById('editModal').classList.add('open');
+  }
+
+  document.getElementById('closeEditModal').addEventListener('click', () => {
+    document.getElementById('editModal').classList.remove('open');
+  });
+
+  document.getElementById('editModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) document.getElementById('editModal').classList.remove('open');
+  });
+
+  document.getElementById('editForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn      = document.getElementById('saveEditBtn');
+    const alertEl  = document.getElementById('editAlert');
+    const userId   = document.getElementById('editUserId').value;
+    const fullName = document.getElementById('editFullName').value.trim();
+    const dept     = document.getElementById('editDept').value;
+    const phone    = document.getElementById('editPhone').value.trim();
+    const role     = document.getElementById('editRole').value;
+
+    if (!fullName) return showAlert(alertEl, 'Full name is required.', 'error');
+
+    setLoading(btn, true, 'Saving…');
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName, department: dept, phone, role })
+      .eq('id', userId);
+
+    setLoading(btn, false);
+
+    if (error) return showAlert(alertEl, error.message, 'error');
+
+    showAlert(alertEl, 'User updated successfully!', 'success');
+
+    // Update local state
+    const idx = allUsers.findIndex(u => u.id === userId);
+    if (idx >= 0) {
+      allUsers[idx].full_name  = fullName;
+      allUsers[idx].department = dept;
+      allUsers[idx].phone      = phone;
+      allUsers[idx].role       = role;
+    }
+    updateSummary();
+
+    setTimeout(() => {
+      document.getElementById('editModal').classList.remove('open');
+      applyFilters();
+    }, 800);
+  });
+
+  // ── Delete user modal ─────────────────────────────────────
+  let deleteUserId = null;
+
+  function openDeleteModal(userId, name) {
+    deleteUserId = userId;
+    document.getElementById('deleteModalText').textContent =
+      `You are about to permanently delete "${name}" from the system.`;
+    document.getElementById('deleteModal').classList.add('open');
+  }
+
+  document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+    document.getElementById('deleteModal').classList.remove('open');
+    deleteUserId = null;
+  });
+
+  document.getElementById('deleteModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      document.getElementById('deleteModal').classList.remove('open');
+      deleteUserId = null;
+    }
+  });
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    if (!deleteUserId) return;
+    const btn = document.getElementById('confirmDeleteBtn');
+    setLoading(btn, true, 'Deleting…');
+
+    // Delete attendance logs first
+    await supabase.from('attendance_logs').delete().eq('user_id', deleteUserId);
+    // Delete leave requests
+    await supabase.from('leave_requests').delete().eq('user_id', deleteUserId);
+    // Delete profile (auth.users row is deleted by cascade)
+    const { error } = await supabase.from('profiles').delete().eq('id', deleteUserId);
+
+    setLoading(btn, false);
+    btn.textContent = 'Yes, Delete';
+
+    if (error) { alert(error.message); return; }
+
+    document.getElementById('deleteModal').classList.remove('open');
+    deleteUserId = null;
+
+    // Remove from local state and re-render
+    allUsers = allUsers.filter(u => u.id !== deleteUserId);
+    await loadUsers(); // reload to get accurate data
+  });
+
+  // ── Search and filters ────────────────────────────────────
+  const debouncedFilter = debounce(applyFilters, 250);
+  document.getElementById('searchInput').addEventListener('input', debouncedFilter);
+  document.getElementById('filterRole').addEventListener('change', applyFilters);
+  document.getElementById('filterActive').addEventListener('change', applyFilters);
+  document.getElementById('filterDept').addEventListener('change', applyFilters);
+
+  document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+    document.getElementById('searchInput').value  = '';
+    document.getElementById('filterRole').value   = '';
+    document.getElementById('filterActive').value = '';
+    document.getElementById('filterDept').value   = '';
+    applyFilters();
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', loadUsers);
+
+  // ── Mobile sidebar ────────────────────────────────────────
+  const sidebar = document.querySelector('.sidebar');
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  menuBtn.addEventListener('click', () => {
+    const open = sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('show', open);
+    menuBtn.textContent = open ? '✕' : '☰';
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('show');
+    menuBtn.textContent = '☰';
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+  loadUsers();
+
+</script>
+
+</body>
+</html>

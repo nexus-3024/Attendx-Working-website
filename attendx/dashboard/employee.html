@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="../css/dashboard.css">
 </head>
 <body>
+  <!-- Mobile hamburger menu button -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+<!-- Sidebar overlay (tap to close sidebar on mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="app-layout">
 
@@ -309,7 +313,8 @@
   import { formatDate, formatTime, todayISO,
            statusBadge, showAlert, setLoading,
            daysBetween, capitalize,
-           getCurrentMonthYear }                    from '../js/utils.js';
+           getCurrentMonthYear,
+           initMobileSidebar }                      from '../js/utils.js';
 
   // ── Auth guard ────────────────────────────────────────────
   const user    = await requireAuth();
@@ -566,24 +571,29 @@
         <td>${l.admin_comment || '—'}</td>
         <td>
           ${l.status === 'pending'
-            ? `<button class="btn btn-outline btn-sm" onclick="cancelLeave('${l.id}')">Cancel</button>`
+            ? `<button class="btn btn-outline btn-sm cancel-leave-btn" data-id="${l.id}">Cancel</button>`
             : '—'
           }
         </td>
       </tr>
     `).join('');
-  }
 
-  // Make cancelLeave accessible from inline onclick
-  window.cancelLeave = async (id) => {
-    if (!confirm('Cancel this leave request?')) return;
-    const { error } = await supabase
-      .from('leave_requests')
-      .update({ status: 'cancelled' })
-      .eq('id', id)
-      .eq('user_id', user.id);
-    if (!error) loadLeaves();
-  };
+    // FIX 5: Use event delegation instead of window.cancelLeave global.
+    // Attaching cancelLeave to window is fragile — if the module reloads
+    // or a name collision occurs the inline onclick silently stops working.
+    // Event delegation on the table body is safer and more idiomatic.
+    body.querySelectorAll('.cancel-leave-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Cancel this leave request?')) return;
+        const { error } = await supabase
+          .from('leave_requests')
+          .update({ status: 'cancelled' })
+          .eq('id', btn.dataset.id)
+          .eq('user_id', user.id);
+        if (!error) loadLeaves();
+      });
+    });
+  }
 
   // ── Analytics section ──────────────────────────────────────
   async function loadAnalytics() {
@@ -643,6 +653,9 @@
       </div>
     `;
   }
+
+  // FIX 10: Mobile sidebar handled by shared utility — no more copy-paste.
+  initMobileSidebar();
 
 </script>
 

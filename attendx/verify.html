@@ -73,37 +73,56 @@
   </div>
 
   <script type="module">
-    import { supabase }          from './js/supabase-client.js';
-    import { showAlert }         from './js/utils.js';
+  import { supabase, waitForSession } from './js/supabase-client.js';
+  import { showAlert }                from './js/utils.js';
 
-    // Show user's email in the pending state
-    const params = new URLSearchParams(window.location.search);
-    const email  = params.get('email');
-    if (email) {
-      document.getElementById('emailDisplay').textContent = email;
-    }
+  // Show the email from query param
+  const params = new URLSearchParams(window.location.search);
+  const email  = params.get('email');
+  if (email) {
+    const el = document.getElementById('emailDisplay');
+    if (el) el.textContent = email;
+  }
 
-    // Check if the user just clicked a verification link
-    // Supabase puts #access_token=... or ?type=signup in the URL
-    const hash   = window.location.hash;
-    const search = window.location.search;
+  // ── KEY FIX: Only handle the verified state ──────────────
+  // Do NOT redirect away from this page automatically.
+  // The loop happens because we redirect too eagerly.
+  // Instead: if user IS verified, show the success state.
+  // If not, show "check your email". That's it. No redirects.
 
-    // Handle email confirmation redirect from Supabase
-    const { data: { session }, error } = await supabase.auth.getSession();
+  const hash   = window.location.hash;
+  const search = window.location.search;
 
-    if (error) {
-      document.getElementById('state-pending').classList.add('hidden');
-      document.getElementById('state-error').classList.remove('hidden');
-      document.getElementById('errorMessage').textContent = error.message;
-    } else if (session && (hash.includes('access_token') || search.includes('type=signup'))) {
-      // User just verified their email and has an active session
+  // Check if Supabase put a token in the URL
+  // (this happens when user clicks the email confirmation link)
+  const hasToken = hash.includes('access_token') ||
+                   hash.includes('type=recovery') ||
+                   search.includes('type=signup') ||
+                   search.includes('code=');        // PKCE flow uses ?code=
+
+  if (hasToken) {
+    // Wait for Supabase to process the token from the URL
+    const session = await waitForSession();
+
+    if (session) {
+      // Successfully verified!
       document.getElementById('state-pending').classList.add('hidden');
       document.getElementById('state-verified').classList.remove('hidden');
+      // Clear the hash/token from URL without reloading
+      history.replaceState(null, '', window.location.pathname);
+    } else {
+      // Token was in URL but session failed — show error
+      document.getElementById('state-pending').classList.add('hidden');
+      document.getElementById('state-error').classList.remove('hidden');
     }
-    // Otherwise: stay on the "check your email" state
+  }
+  // If no token in URL: stay on the "check your email" state
+  // Do NOT call getSession() here — it causes the loop
 
-    // Resend verification email
-    document.getElementById('resendBtn').addEventListener('click', async (e) => {
+  // Resend verification email
+  const resendBtn = document.getElementById('resendBtn');
+  if (resendBtn) {
+    resendBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       const emailInput = email || prompt('Enter your email address:');
       if (!emailInput) return;
@@ -113,13 +132,15 @@
         email: emailInput
       });
 
+      const alertEl = document.getElementById('resendAlert');
       if (error) {
-        showAlert('#resendAlert', error.message, 'error');
+        showAlert(alertEl, error.message, 'error');
       } else {
-        showAlert('#resendAlert', 'Verification email resent! Check your inbox.', 'success');
+        showAlert(alertEl, 'Verification email resent! Check your inbox.', 'success');
       }
     });
-  </script>
+  }
+</script>
 
 </body>
 </html>

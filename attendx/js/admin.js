@@ -80,6 +80,24 @@ export async function getAllAttendance({
   return data;
 }
 
+// ── FIX 7: getTodayAttendance — queries by today's date directly ─
+// Previously, loadOverview called getAllAttendance with no date
+// filter and then filtered client-side (.filter(r => r.date === today)).
+// That wastes a query fetching up to 100 recent rows just to discard
+// most of them. This dedicated function passes the date to the DB.
+export async function getTodayAttendance() {
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('attendance_with_profiles')
+    .select('*')
+    .eq('date', today)
+    .order('clock_in', { ascending: true });
+
+  if (error) { console.error('getTodayAttendance:', error); return []; }
+  return data;
+}
+
 // ── Get overview stats for the admin dashboard ──────────────────
 export async function getAdminOverview() {
   const today     = new Date().toISOString().split('T')[0];
@@ -87,43 +105,38 @@ export async function getAdminOverview() {
   const thisMonth = now.getMonth() + 1;
   const thisYear  = now.getFullYear();
 
-  // Run all queries in parallel for speed
   const [
     profilesRes,
     todayRes,
     monthRes,
     leaveRes
   ] = await Promise.all([
-    // Total active employees
     supabase
       .from('profiles')
       .select('id, is_active', { count: 'exact' })
       .eq('role', 'employee'),
 
-    // Who clocked in today
     supabase
       .from('attendance_logs')
       .select('user_id', { count: 'exact' })
       .eq('date', today),
 
-    // This month's attendance records
     supabase
       .from('attendance_logs')
       .select('status, total_hours')
       .gte('date', `${thisYear}-${String(thisMonth).padStart(2,'0')}-01`)
       .lte('date', `${thisYear}-${String(thisMonth).padStart(2,'0')}-31`),
 
-    // Pending leave requests
     supabase
       .from('leave_requests')
       .select('id', { count: 'exact' })
       .eq('status', 'pending')
   ]);
 
-  const employees    = profilesRes.data   || [];
-  const todayLogs    = todayRes.data      || [];
-  const monthLogs    = monthRes.data      || [];
-  const pendingLeaves = leaveRes.count    ?? 0;
+  const employees     = profilesRes.data   || [];
+  const todayLogs     = todayRes.data      || [];
+  const monthLogs     = monthRes.data      || [];
+  const pendingLeaves = leaveRes.count     ?? 0;
 
   const totalEmployees  = employees.filter(e => e.is_active).length;
   const presentToday    = todayLogs.length;
@@ -156,7 +169,6 @@ export async function getEmployeeMonthlySummaries(month, year) {
 
   if (error) { console.error(error); return []; }
 
-  // Group by user
   const byUser = {};
   for (const row of data) {
     if (!byUser[row.user_id]) {

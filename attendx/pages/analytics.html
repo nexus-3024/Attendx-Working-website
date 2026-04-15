@@ -9,6 +9,10 @@
 </head>
 <body>
 
+<!-- FIX 2: Mobile sidebar elements were missing from analytics.html -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
 <div class="app-layout">
 
   <aside class="sidebar">
@@ -139,7 +143,7 @@
            renderBarChart, renderRing }         from '../js/analytics.js';
   import { getEmployeeMonthlySummaries }        from '../js/admin.js';
   import { handleLogout }                       from '../js/auth.js';
-  import { exportCSV, getCurrentMonthYear }     from '../js/utils.js';
+  import { exportCSV, getCurrentMonthYear, initMobileSidebar } from '../js/utils.js';
 
   const { user, profile } = await requireAdmin() || {};
   if (!user) throw new Error('redirect');
@@ -374,6 +378,9 @@
 
   // Load current month on page open
   loadAnalytics();
+
+  // FIX 2: Initialize mobile sidebar (was missing entirely from this page)
+  initMobileSidebar();
 
 </script>
 

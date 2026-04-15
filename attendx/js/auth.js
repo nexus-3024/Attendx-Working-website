@@ -1,20 +1,14 @@
-// js/auth.js — Authentication logic (register, login, logout)
+// js/auth.js
 
-import { supabase, getUserProfile } from './supabase-client.js';
-import { setLoading, showAlert }    from './utils.js';
+import { supabase, getUserProfile, waitForSession } from './supabase-client.js';
+import { setLoading, showAlert }                    from './utils.js';
 
-// ── REGISTER ───────────────────────────────────────────────────
-// Called when the registration form is submitted.
-// Signs up with Supabase Auth, which:
-//   1. Creates a row in auth.users
-//   2. Sends a verification email
-//   3. Our trigger creates a row in public.profiles automatically
 export async function handleRegister(e) {
   e.preventDefault();
 
-  const form       = e.target;
-  const btn        = form.querySelector('[type="submit"]');
-  const alertEl    = form.querySelector('.alert');
+  const form    = e.target;
+  const btn     = form.querySelector('[type="submit"]');
+  const alertEl = form.querySelector('.alert');
 
   const fullName   = form.full_name.value.trim();
   const email      = form.email.value.trim().toLowerCase();
@@ -23,7 +17,6 @@ export async function handleRegister(e) {
   const department = form.department?.value || 'General';
   const phone      = form.phone?.value.trim() || '';
 
-  // Client-side validation
   if (!fullName || !email || !password) {
     return showAlert(alertEl, 'Please fill in all required fields.');
   }
@@ -36,14 +29,10 @@ export async function handleRegister(e) {
 
   setLoading(btn, true, 'Creating account...');
 
-  // Sign up via Supabase Auth
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      // This metadata is available in the trigger via raw_user_meta_data
-      data: { full_name: fullName }
-    }
+    options: { data: { full_name: fullName } }
   });
 
   if (error) {
@@ -51,8 +40,6 @@ export async function handleRegister(e) {
     return showAlert(alertEl, error.message);
   }
 
-  // After sign-up, update the profile with phone and department
-  // The trigger already created the row with full_name and email
   if (data.user) {
     await supabase
       .from('profiles')
@@ -61,17 +48,14 @@ export async function handleRegister(e) {
   }
 
   setLoading(btn, false);
-
-  // Redirect to verify page to tell user to check their email
   window.location.href = '/verify.html?email=' + encodeURIComponent(email);
 }
 
-// ── LOGIN ──────────────────────────────────────────────────────
 export async function handleLogin(e) {
   e.preventDefault();
 
-  const form   = e.target;
-  const btn    = form.querySelector('[type="submit"]');
+  const form    = e.target;
+  const btn     = form.querySelector('[type="submit"]');
   const alertEl = form.querySelector('.alert');
 
   const email    = form.email.value.trim().toLowerCase();
@@ -84,31 +68,28 @@ export async function handleLogin(e) {
   setLoading(btn, true, 'Signing in...');
 
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
+    email, password
   });
 
   if (error) {
     setLoading(btn, false);
-    // Give friendly messages instead of raw Supabase errors
     if (error.message.includes('Email not confirmed')) {
       return showAlert(alertEl,
-        'Please verify your email first. Check your inbox for the confirmation link.',
+        'Please verify your email first. Check your inbox.',
         'warning'
       );
     }
     if (error.message.includes('Invalid login credentials')) {
-      return showAlert(alertEl, 'Incorrect email or password. Please try again.');
+      return showAlert(alertEl, 'Incorrect email or password.');
     }
     return showAlert(alertEl, error.message);
   }
 
-  // Get user profile to determine role
   const profile = await getUserProfile(data.user.id);
 
   if (!profile) {
     setLoading(btn, false);
-    return showAlert(alertEl, 'Account setup incomplete. Please contact admin.');
+    return showAlert(alertEl, 'Account setup incomplete. Contact admin.');
   }
 
   if (!profile.is_active) {
@@ -117,7 +98,14 @@ export async function handleLogin(e) {
     return showAlert(alertEl, 'Your account has been deactivated. Contact admin.');
   }
 
-  // Redirect based on role
+  setLoading(btn, true, 'Loading dashboard...');
+
+  // ── FIX 2: Wait for session to be confirmed before redirecting ──
+  // Instead of an arbitrary 800ms delay, we verify the session is
+  // actually persisted to localStorage before navigating away.
+  // This is safe on both desktop and mobile browsers.
+  await waitForSession();
+
   if (profile.role === 'admin') {
     window.location.href = '/dashboard/admin.html';
   } else {
@@ -125,8 +113,8 @@ export async function handleLogin(e) {
   }
 }
 
-// ── LOGOUT ─────────────────────────────────────────────────────
 export async function handleLogout() {
   await supabase.auth.signOut();
+  sessionStorage.clear();
   window.location.href = '/login.html';
 }

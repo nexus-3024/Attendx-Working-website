@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance History — AttendX</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+<!-- Mobile UI -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-layout">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">🏢 Attend<span class="accent">X</span></div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Navigation</div>
+      <a class="nav-item" href="/dashboard/employee.html">
+        <span class="nav-icon">🏠</span> Dashboard
+      </a>
+      <a class="nav-item active">
+        <span class="nav-icon">📋</span> Attendance History
+      </a>
+      <a class="nav-item" href="/pages/leave.html">
+        <span class="nav-icon">🏖️</span> Leave Requests
+      </a>
+      <div class="nav-section">Account</div>
+      <button class="nav-item" id="logoutBtn">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="avatarEl">?</div>
+      <div>
+        <div class="user-info-name" id="userNameEl">Loading…</div>
+        <div class="user-info-role">Employee</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Attendance History</h1>
+        <p class="page-subtitle">Your complete clock-in and clock-out records</p>
+      </div>
+    </div>
+
+    <!-- ── Summary Stats for selected month ─────────────────── -->
+    <div class="stats-grid" id="monthStats" style="margin-bottom:24px">
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div>
+          <div class="stat-value" id="statPresent">—</div>
+          <div class="stat-label">Present Days</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">⏰</div>
+        <div>
+          <div class="stat-value" id="statLate">—</div>
+          <div class="stat-label">Late Days</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">📅</div>
+        <div>
+          <div class="stat-value" id="statHalfDay">—</div>
+          <div class="stat-label">Half Days</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple">⌚</div>
+        <div>
+          <div class="stat-value" id="statHours">—</div>
+          <div class="stat-label">Total Hours</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Records Table ──────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">
+        Records
+        <button class="btn btn-outline btn-sm hidden" id="exportBtn">⬇ Export CSV</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar" style="margin-bottom:16px">
+        <select id="filterMonth">
+          <option value="">All Months</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+        <select id="filterYear"></select>
+        <select id="filterStatus">
+          <option value="">All Status</option>
+          <option value="present">Present</option>
+          <option value="late">Late</option>
+          <option value="half_day">Half Day</option>
+        </select>
+        <button class="btn btn-primary btn-sm" id="filterBtn">Filter</button>
+        <button class="btn btn-outline btn-sm" id="clearBtn">Clear</button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table id="attendanceTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day</th>
+              <th>Clock In</th>
+              <th>Clock Out</th>
+              <th>Hours Worked</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="7" class="text-center text-muted" style="padding:40px">
+                Select a month and click Filter to load records
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Record count -->
+      <div id="recordCount" class="text-muted" style="margin-top:12px;font-size:13px"></div>
+    </div>
+
+    <!-- ── Monthly Attendance Calendar Heatmap ───────────────── -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">Monthly Calendar View</div>
+      <div id="calendarView" style="padding:8px 0">
+        <div class="text-muted text-center" style="padding:20px">
+          Filter by month to see the calendar view
+        </div>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:16px;padding-top:16px;
+        border-top:1px solid var(--border);font-size:12px;color:var(--text-2)">
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:12px;height:12px;border-radius:3px;background:var(--success);display:inline-block"></span>
+          Present
+        </span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:12px;height:12px;border-radius:3px;background:var(--warning);display:inline-block"></span>
+          Late
+        </span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:12px;height:12px;border-radius:3px;background:var(--accent);display:inline-block"></span>
+          Half Day
+        </span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:12px;height:12px;border-radius:3px;background:var(--danger-dim);border:1px solid var(--danger);display:inline-block"></span>
+          Absent
+        </span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:12px;height:12px;border-radius:3px;background:var(--surface2);display:inline-block"></span>
+          Weekend
+        </span>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module">
+  import { waitForSession, getUserProfile, supabase } from '../js/supabase-client.js';
+  import { getAttendanceHistory, getMonthlySummary }  from '../js/attendance.js';
+  import { handleLogout }                             from '../js/auth.js';
+  import { formatDate, formatTime, statusBadge,
+           exportCSV, todayISO }                      from '../js/utils.js';
+
+  // ── Auth guard ────────────────────────────────────────────
+  const session = await waitForSession();
+  if (!session) { window.location.href = '/login.html'; throw new Error(); }
+  const user    = session.user;
+  const profile = await getUserProfile(user.id);
+  if (!profile)  { window.location.href = '/login.html'; throw new Error(); }
+
+  // ── Sidebar user ──────────────────────────────────────────
+  const initials = (profile.full_name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatarEl').textContent   = initials;
+  document.getElementById('userNameEl').textContent = profile.full_name || user.email;
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  // ── Populate year selector ────────────────────────────────
+  const curYear  = new Date().getFullYear();
+  const curMonth = new Date().getMonth() + 1;
+  const yearSel  = document.getElementById('filterYear');
+  for (let y = curYear; y >= curYear - 3; y--) {
+    yearSel.innerHTML += `<option value="${y}" ${y === curYear ? 'selected' : ''}>${y}</option>`;
+  }
+  document.getElementById('filterMonth').value = curMonth;
+
+  let allRecords = [];
+
+  // ── Load records ──────────────────────────────────────────
+  async function loadRecords() {
+    const month    = parseInt(document.getElementById('filterMonth').value) || null;
+    const year     = parseInt(document.getElementById('filterYear').value)  || curYear;
+    const statusF  = document.getElementById('filterStatus').value          || null;
+
+    // Fetch from Supabase
+    let query = supabase
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false });
+
+    if (month && year) {
+      const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
+      const lastDay   = new Date(year, month, 0).getDate();
+      const endDate   = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+      query = query.gte('date', startDate).lte('date', endDate);
+    }
+    if (statusF) query = query.eq('status', statusF);
+
+    const { data, error } = await query;
+    if (error) { console.error(error); return; }
+
+    allRecords = data || [];
+    renderTable(allRecords);
+    updateStats(month, year);
+    if (month && year) renderCalendar(month, year, allRecords);
+    else document.getElementById('calendarView').innerHTML =
+      '<div class="text-muted text-center" style="padding:20px">Filter by month to see calendar view</div>';
+  }
+
+  // ── Render table ──────────────────────────────────────────
+  function renderTable(records) {
+    const tbody     = document.getElementById('tableBody');
+    const exportBtn = document.getElementById('exportBtn');
+    const countEl   = document.getElementById('recordCount');
+
+    if (!records.length) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <h3>No records found</h3>
+          <p>Try adjusting your filters or clock in to start tracking</p>
+        </div>
+      </td></tr>`;
+      exportBtn.classList.add('hidden');
+      countEl.textContent = '';
+      return;
+    }
+
+    exportBtn.classList.remove('hidden');
+    countEl.textContent = `${records.length} record${records.length !== 1 ? 's' : ''} found`;
+
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    tbody.innerHTML = records.map(r => {
+      const dateObj  = new Date(r.date + 'T00:00:00');
+      const dayName  = DAYS[dateObj.getDay()];
+      const isToday  = r.date === todayISO();
+
+      return `
+        <tr style="${isToday ? 'background:var(--accent-dim)' : ''}">
+          <td>
+            <span style="font-weight:500;color:var(--text)">
+              ${formatDate(r.date)}
+            </span>
+            ${isToday ? '<span class="badge badge-info" style="margin-left:6px;font-size:10px">Today</span>' : ''}
+          </td>
+          <td style="color:var(--text-3)">${dayName}</td>
+          <td>
+            <span style="font-weight:500;color:var(--text)">
+              ${formatTime(r.clock_in)}
+            </span>
+          </td>
+          <td>
+            ${r.clock_out
+              ? `<span style="font-weight:500;color:var(--text)">${formatTime(r.clock_out)}</span>`
+              : '<span class="badge badge-warning">In Progress</span>'
+            }
+          </td>
+          <td>
+            ${r.total_hours != null
+              ? `<strong>${r.total_hours}h</strong>`
+              : r.clock_in && !r.clock_out
+                ? '<span class="text-muted">—</span>'
+                : '—'
+            }
+          </td>
+          <td>${statusBadge(r.status)}</td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-2)">
+            ${r.notes || '—'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ── Update stat cards ─────────────────────────────────────
+  async function updateStats(month, year) {
+    if (!month || !year) {
+      ['statPresent','statLate','statHalfDay','statHours'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
+      return;
+    }
+
+    const summary = await getMonthlySummary(user.id, month, year);
+    if (summary) {
+      document.getElementById('statPresent').textContent  = Number(summary.present_days);
+      document.getElementById('statLate').textContent     = Number(summary.late_days);
+      document.getElementById('statHalfDay').textContent  = Number(summary.half_days);
+      document.getElementById('statHours').textContent    = Number(summary.total_hours) + 'h';
+    }
+  }
+
+  // ── Calendar heatmap ──────────────────────────────────────
+  function renderCalendar(month, year, records) {
+    const container   = document.getElementById('calendarView');
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDay    = new Date(year, month - 1, 1).getDay(); // 0=Sun
+
+    // Map date string → status
+    const dateMap = {};
+    records.forEach(r => { dateMap[r.date] = r.status; });
+
+    const MONTH_NAMES = ['January','February','March','April','May','June',
+                         'July','August','September','October','November','December'];
+    const DAY_LABELS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    let html = `
+      <div style="font-weight:600;font-size:15px;margin-bottom:16px;color:var(--text)">
+        ${MONTH_NAMES[month-1]} ${year}
+      </div>
+      <div style="
+        display:               grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap:                   6px;
+        max-width:             420px;
+      ">
+    `;
+
+    // Day labels header
+    DAY_LABELS.forEach(d => {
+      html += `<div style="text-align:center;font-size:11px;font-weight:600;
+        color:var(--text-3);padding:4px 0">${d}</div>`;
+    });
+
+    // Empty cells before day 1
+    for (let i = 0; i < firstDay; i++) {
+      html += `<div></div>`;
+    }
+
+    // Day cells
+    const today = todayISO();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr  = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dow      = new Date(dateStr).getDay();
+      const isWknd   = dow === 0 || dow === 6;
+      const isToday  = dateStr === today;
+      const isFuture = dateStr > today;
+      const status   = dateMap[dateStr];
+
+      let bg    = 'var(--surface2)';
+      let title = 'Weekend';
+
+      if (!isWknd) {
+        if (isFuture)           { bg = 'var(--surface2)';   title = 'Future'; }
+        else if (!status)       { bg = 'rgba(248,113,113,0.15)'; title = 'Absent'; }
+        else if (status === 'present')  { bg = 'rgba(52,211,153,0.3)';  title = 'Present'; }
+        else if (status === 'late')     { bg = 'rgba(251,191,36,0.3)';  title = 'Late'; }
+        else if (status === 'half_day') { bg = 'rgba(79,126,247,0.3)';  title = 'Half Day'; }
+      }
+
+      html += `
+        <div title="${title} — ${dateStr}" style="
+          aspect-ratio:  1;
+          border-radius: 6px;
+          background:    ${bg};
+          display:       flex;
+          align-items:   center;
+          justify-content: center;
+          font-size:     12px;
+          font-weight:   ${isToday ? '700' : '400'};
+          color:         ${isWknd || isFuture ? 'var(--text-3)' : 'var(--text)'};
+          border:        ${isToday ? '2px solid var(--accent)' : '2px solid transparent'};
+          cursor:        default;
+        ">${d}</div>
+      `;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+
+  // ── CSV Export ────────────────────────────────────────────
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const month     = document.getElementById('filterMonth').value;
+    const year      = document.getElementById('filterYear').value;
+    const MONTHS    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const label     = month ? `_${MONTHS[month-1]}_${year}` : `_${year}`;
+
+    exportCSV(
+      `my_attendance${label}.csv`,
+      allRecords.map(r => [
+        r.date,
+        new Date(r.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }),
+        formatTime(r.clock_in),
+        r.clock_out ? formatTime(r.clock_out) : '',
+        r.total_hours ?? '',
+        r.status,
+        r.notes || ''
+      ]),
+      ['Date','Day','Clock In','Clock Out','Total Hours','Status','Notes']
+    );
+  });
+
+  // ── Filter buttons ────────────────────────────────────────
+  document.getElementById('filterBtn').addEventListener('click', loadRecords);
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('filterMonth').value = curMonth;
+    document.getElementById('filterYear').value  = curYear;
+    document.getElementById('filterStatus').value = '';
+    loadRecords();
+  });
+
+  // ── Mobile sidebar ────────────────────────────────────────
+  const sidebar = document.querySelector('.sidebar');
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  menuBtn.addEventListener('click', () => {
+    const open = sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('show', open);
+    menuBtn.textContent = open ? '✕' : '☰';
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('show');
+    menuBtn.textContent = '☰';
+  });
+
+  // ── Initial load ──────────────────────────────────────────
+  loadRecords();
+
+</script>
+
+</body>
+</html>

@@ -1,72 +1,88 @@
-// js/supabase-client.js
-// ─────────────────────────────────────────────────────────────
-// Single source of truth for the Supabase client.
-// Every other JS file imports { supabase } from this file.
-// ─────────────────────────────────────────────────────────────
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL  = 'https://oejmahqzkcgsjyswrbbq.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_Lr8LrHsVmoQ008AVzF1z5w_aT-ikwhZ';   
 
-// ── Credentials ────────────────────────────────────────────
-// Replace these two values with your own from:
-// Supabase Dashboard → Project Settings → API
-const SUPABASE_URL  = 'https://oejmahqzkcgsjyswrbbq.supabase.co';   // ← your URL
-const SUPABASE_ANON = 'sb_publishable_Lr8LrHsVmoQ008AVzF1z5w_aT-ikwhZ'; // ← your anon key
-
-// ── Create client ──────────────────────────────────────────
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+// 1. Initialize Supabase using the global object loaded from your HTML <script>
+window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    // Persist session across page refreshes using localStorage
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true   // handles email verification redirect
+    persistSession:     true,
+    autoRefreshToken:   true,
+    detectSessionInUrl: true,
+    flowType:           'pkce',   // Excellent choice for mobile reliability
+    storage:            window.localStorage
   }
 });
 
-// ── Helper: get the currently logged-in user ───────────────
-// Returns null if not logged in.
-export async function getCurrentUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
+// 2. Wait for auth to be READY (fixes mobile loops)
+window.waitForSession = function() {
+  return new Promise((resolve) => {
+    window.supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        resolve(session);
+        return;
+      }
 
-// ── Helper: get the user's profile row from public.profiles ─
-// This includes their role ('employee' or 'admin').
-export async function getUserProfile(userId) {
-  const { data, error } = await supabase
+      // Wait for auth state to settle if hash token is still parsing
+      const { data: { subscription } } = window.supabase.auth.onAuthStateChange(
+        (event, session) => {
+          subscription.unsubscribe();
+          resolve(session);
+        }
+      );
+
+      // Safety timeout: if nothing fires in 3s, resolve with null
+      setTimeout(() => {
+        subscription.unsubscribe();
+        resolve(null);
+      }, 3000);
+    });
+  });
+};
+
+// 3. Get user profile
+window.getUserProfile = async function(userId) {
+  const { data, error } = await window.supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
     .single();
 
   if (error) {
-    console.error('Error fetching profile:', error.message);
+    console.error('Profile fetch error:', error.message);
     return null;
   }
   return data;
-}
+};
 
-// ── Helper: require login — redirect to login if not authed ─
-// Call this at the top of any protected page.
-export async function requireAuth() {
-  const user = await getCurrentUser();
-  if (!user) {
-    window.location.href = '/login.html';
+// 4. Safe Auth Check — redirects if not logged in
+window.requireAuth = async function() {
+  const session = await window.waitForSession();
+
+  if (!session) {
+    const path = window.location.pathname;
+    const isAuthPage = path.includes('login') ||
+                       path.includes('register') ||
+                       path.includes('verify') ||
+                       path === '/' ||
+                       path.endsWith('index.html');
+
+    if (!isAuthPage) {
+      window.location.href = '/login.html';
+    }
     return null;
   }
-  return user;
-}
+  return session.user;
+};
 
-// ── Helper: require admin role ──────────────────────────────
-// Call this at the top of any admin-only page.
-export async function requireAdmin() {
-  const user = await requireAuth();
+// 5. Safe Admin Check
+window.requireAdmin = async function() {
+  const user = await window.requireAuth();
   if (!user) return null;
 
-  const profile = await getUserProfile(user.id);
+  const profile = await window.getUserProfile(user.id);
   if (!profile || profile.role !== 'admin') {
-    // Not an admin — redirect to employee dashboard
     window.location.href = '/dashboard/employee.html';
     return null;
   }
   return { user, profile };
-}
+};
