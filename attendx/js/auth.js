@@ -3,6 +3,7 @@
 import { supabase, getUserProfile, waitForSession } from './supabase-client.js';
 import { setLoading, showAlert }                    from './utils.js';
 
+
 export async function handleRegister(e) {
   e.preventDefault();
 
@@ -40,16 +41,19 @@ export async function handleRegister(e) {
     return showAlert(alertEl, error.message);
   }
 
+  // FIX: also save email + full_name into the profiles row.
+  // The old code only saved phone + department, leaving email blank in the DB.
   if (data.user) {
     await supabase
       .from('profiles')
-      .update({ phone, department })
+      .update({ email, full_name: fullName, phone, department })
       .eq('id', data.user.id);
   }
 
   setLoading(btn, false);
   window.location.href = '/verify.html?email=' + encodeURIComponent(email);
 }
+
 
 export async function handleLogin(e) {
   e.preventDefault();
@@ -75,7 +79,7 @@ export async function handleLogin(e) {
     setLoading(btn, false);
     if (error.message.includes('Email not confirmed')) {
       return showAlert(alertEl,
-        'Please verify your email first. Check your inbox.',
+        'Please verify your email first. Check your inbox for a confirmation link.',
         'warning'
       );
     }
@@ -89,21 +93,18 @@ export async function handleLogin(e) {
 
   if (!profile) {
     setLoading(btn, false);
-    return showAlert(alertEl, 'Account setup incomplete. Contact admin.');
+    return showAlert(alertEl, 'Account setup incomplete. Please contact admin.');
   }
 
   if (!profile.is_active) {
     await supabase.auth.signOut();
     setLoading(btn, false);
-    return showAlert(alertEl, 'Your account has been deactivated. Contact admin.');
+    return showAlert(alertEl, 'Your account has been deactivated. Please contact admin.');
   }
 
   setLoading(btn, true, 'Loading dashboard...');
 
-  // ── FIX 2: Wait for session to be confirmed before redirecting ──
-  // Instead of an arbitrary 800ms delay, we verify the session is
-  // actually persisted to localStorage before navigating away.
-  // This is safe on both desktop and mobile browsers.
+  // Wait for session to be confirmed in localStorage before navigating
   await waitForSession();
 
   if (profile.role === 'admin') {
@@ -112,6 +113,7 @@ export async function handleLogin(e) {
     window.location.href = '/dashboard/employee.html';
   }
 }
+
 
 export async function handleLogout() {
   await supabase.auth.signOut();
